@@ -1,0 +1,186 @@
+---
+title: "GroupProject-InterimReport"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Install or Load packages
+
+```{r}
+library(reshape2)
+library(ggplot2)
+library(e1071)
+library(dplyr)
+library(Amelia)
+library(RANN)
+library(arm)
+library(caret)
+
+rmse <- function(y, yhat) {
+  sqrt(mean((y - yhat)^2))
+}
+```
+
+```{r}
+#setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
+setwd("E:/MS/PAR/GroupProject")
+dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
+```
+
+```{r}
+dim(dt.train)
+str(dt.train)
+
+# remove ID, 
+#Cat with NAs with meaning - Alley, MasVnrType(NONE), BsmtQual, BsmtCond, BsmtExposure, BsmtFinType1,BsmtFinType2,FireplaceQu, GarageType,GarageFinish,GarageQual ,GarageCond,PoolQC,Fence,MiscFeature 
+#Num but Cat - OverallQual, OverallCond, YearBuilt, YearRemodAdd(LATER),TotRmsAbvGrd,Fireplaces, 
+
+#MoSold,YrSold
+
+length(dt.train)
+
+char.variables <- names(dt.train)[which(sapply(dt.train,is.character))]
+char.variables <- c(char.variables, 'OverallQual', 'OverallCond', 'YearBuilt', 'YearRemodAdd','TotRmsAbvGrd','Fireplaces')
+num.variables <- names(dt.train)[which(sapply(dt.train,is.numeric))]
+num.variables <- setdiff(num.variables, c( 'OverallQual', 'OverallCond', 'YearBuild', 'YearRemodAdd','TotRmsAbvGrd','Fireplaces'))
+
+
+qplot(x=Var1, y=Var2, data=melt(cor(dt.train[,-which(names(dt.train) %in% char.variables)])), fill=value, geom="tile") +scale_fill_gradient2(limits=c(-1, 1))
+
+```
+From the correlation heatmap, it is evident that, GarageYrBlt, MasVnrArea, LotFrontage have 'N/A'
+Looking into the numbers of the missing values. 
+```{r}
+
+colSums(sapply(dt.train, is.na))
+
+# colSums(sapply(dt.train[,.SD, .SDcols = cat_var], is.na))
+
+```
+
+```{r Imputation, Include}
+
+str(dt.train)
+aimp <- amelia(dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))], m = 25)
+summary(aimp)
+plot(aimp)
+par(mfrow=c(1,1))
+
+head(aimp$imputations[[1]])
+aimp$imputations$imp25$LotFrontage
+
+
+bagImpute <- predict(preProcess(dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))], method=c("bagImpute")), dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))])
+
+bagImpute
+
+dt.train$GarageYrBlt <- round(bagImpute$GarageYrBlt)
+dt.train$MasVnrArea <- bagImpute$MasVnrArea
+dt.train$LotFrontage <- bagImpute$LotFrontage
+
+
+```
+
+```{r}
+
+dt.train$Alley <- ifelse(is.na(dt.train$Alley),"No Alley", dt.train$Alley)
+
+dt.train$MasVnrType <- ifelse(is.na(dt.train$MasVnrType),"None", dt.train$MasVnrType)
+# some data has masvnrtype none and area <> 0
+subset(dt.train, dt.train$MasVnrType == "None")$MasVnrArea 
+
+dt.train$BsmtQual <- ifelse(is.na(dt.train$BsmtQual),"NoBsmt", dt.train$BsmtQual)
+
+dt.train$BsmtCond <- ifelse(is.na(dt.train$BsmtCond),"NoBsmt", dt.train$BsmtCond)
+
+dt.train$BsmtExposure <- ifelse(is.na(dt.train$BsmtExposure),"NoBsmt", dt.train$BsmtExposure)
+
+dt.train$BsmtFinType1 <- ifelse(is.na(dt.train$BsmtFinType1),"NoBsmt", dt.train$BsmtFinType1)
+
+dt.train$BsmtFinType2 <- ifelse(is.na(dt.train$BsmtFinType2),"NoBsmt", dt.train$BsmtFinType2)
+
+#Cat with NAs with meaning - , ,, ,,,Fence,
+
+dt.train$FireplaceQu <- ifelse(is.na(dt.train$FireplaceQu),"NoFireplace", dt.train$FireplaceQu)
+
+dt.train$GarageType <- ifelse(is.na(dt.train$GarageType),"NoGarage", dt.train$GarageType)
+
+dt.train$GarageFinish <- ifelse(is.na(dt.train$GarageFinish),"NoGarage", dt.train$GarageFinish)
+
+dt.train$GarageQual <- ifelse(is.na(dt.train$GarageQual),"NoGarage", dt.train$GarageQual)
+
+dt.train$GarageCond <- ifelse(is.na(dt.train$GarageCond),"NoGarage", dt.train$GarageCond)
+
+dt.train$GarageCond <- ifelse(is.na(dt.train$GarageCond),"NoGarage", dt.train$GarageCond)
+
+dt.train$PoolQC <- ifelse(is.na(dt.train$PoolQC),"NoPool", dt.train$PoolQC)
+
+dt.train$Fence <- ifelse(is.na(dt.train$Fence),"NoFence", dt.train$Fence)
+
+dt.train$MiscFeature <- ifelse(is.na(dt.train$MiscFeature),"NoFence", dt.train$MiscFeature)
+
+colSums(sapply(dt.train, is.na))
+
+for(name in char.variables){
+  print(name)
+  dt.train[[name]] <- factor(dt.train[[name]])
+}
+
+
+```
+
+
+```{r}
+
+names(dt.train)
+
+lm.all <- standardize(
+  lm(
+    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
+    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 +   Condition2 +   BldgType +    
+    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +    RoofMatl +     Exterior1st + 
+    Exterior2nd +  MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +   BsmtQual +     BsmtCond +    
+    BsmtExposure + BsmtFinType1 + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF +    TotalBsmtSF +  Heating +     
+    HeatingQC +    CentralAir +   Electrical +   X1stFlrSF +    X2ndFlrSF +    LowQualFinSF + GrLivArea +    BsmtFullBath +
+    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr + KitchenQual +  TotRmsAbvGrd + Functional +  
+    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +  GarageFinish + GarageCars +   GarageArea +   GarageQual +  
+    GarageCond +   PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch +   ScreenPorch +  PoolArea +    
+    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold +       YrSold +       SaleType +     SaleCondition
+    , data = dt.train
+  )
+)
+
+lm.sel <- standardize(
+  lm(
+    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
+    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 +   Condition2 +   BldgType +    
+    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +    RoofMatl +     Exterior1st + 
+    # Exterior2nd +    BsmtCond +  BsmtFinType1 TotalBsmtSF Electrical GarageFinish GarageCond +  GrLivArea GarageQual
+      MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +   BsmtQual +    
+    BsmtExposure  + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF      +  Heating +     
+    HeatingQC +    CentralAir +     X1stFlrSF +    X2ndFlrSF +    LowQualFinSF  +    BsmtFullBath +
+    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr + KitchenQual +  TotRmsAbvGrd + Functional +  
+    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +    GarageCars +   GarageArea  +  
+     PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch +   ScreenPorch +  PoolArea +    
+    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold +       YrSold +       SaleType +     SaleCondition
+    , data = dt.train
+  )
+)
+
+summary(lm.all)
+coefplot(lm.all)
+
+table(dt.train$BsmtCond, exclude = F)
+
+rmse(dt.train$SalePrice, predict(lm.all))
+summary(lm.sel)
+rmse(dt.train$SalePrice, predict(lm.sel))
+step_selection <- step(lm.sel, trace=F, na.action=na.omit)
+summary(step_selection)
+
+
+```
+

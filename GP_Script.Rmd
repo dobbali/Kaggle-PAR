@@ -1,0 +1,40 @@
+---
+title: "Group_Project"
+author: "Harsha"
+---
+
+```{r, include=F}
+
+library(MASS)
+library(arm)
+library(caret)
+library(leaps)
+library(bestglm)
+library(gmodels) 
+library(pROC)
+library(ISLR)
+library(knitr)
+
+library(ggplot2)
+library(reshape2)
+
+
+# garage year build -> imputation
+
+setwd("E:/MS/PAR/GroupProject")
+
+dt <- read.csv("train.csv", stringsAsFactors = F)
+
+str(dt)
+
+char.variables <- names(dt)[which(sapply(dt,is.character))]
+num.variables <- names(dt)[which(sapply(dt,is.numeric))]
+
+qplot(x=Var1, y=Var2, data=melt(cor(dt[,-which(names(dt) %in% char.variables)])), fill=value, geom="tile") +scale_fill_gradient2(limits=c(-1, 1))
+
+
+
+```
+
+NO Missing data Columns 
+  MSSubClass, MSZoning
