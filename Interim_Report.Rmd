@@ -1,6 +1,6 @@
 ---
 title: "GroupProject-InterimReport"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,18 +21,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
   The data set available on Kaggle contains 80 variables that involve in assessing home values. Out of these, 20 are continuous, 14 are discrete and the remaining 46 are categorical variables. This data has been randomized and then split in to two sets(train and test) of equal size. "SalePrice" is the outcome variable
 
+
+
+```{r ,include=F}
 ### REQUIRED PACKAGES
-
-```{r}
-
-install.packages("e1071")
-install.packages("Amelia")
-install.packages("RANN")
-install.packages("ipred")
-install.packages("corrplot")
-install.packages("RColorBrewer")
-install.packages("lars")
-install.packages("glmnet")
+# install.packages("e1071")
+# install.packages("Amelia")
+# install.packages("RANN")
+# install.packages("ipred")
+# install.packages("corrplot")
+# install.packages("RColorBrewer")
+# install.packages("lars")
+# install.packages("glmnet")
 
 library(glmnet)
 library(lars)
@@ -47,13 +47,13 @@ library(arm)
 library(caret)
 library(ipred)
 library(corrplot)
+library(knitr)
 
 ```
 
+
+```{r, include=F}
 ### DEFINING USEFUL FUNCTIONS
-
-```{r}
-
 rmse <- function(y, yhat) {
   sqrt(mean((y - yhat)^2))
 }
@@ -62,27 +62,14 @@ rmse <- function(y, yhat) {
 
 ### DATA CLEANING AND DATA MODELLING
 
-```{r Loading the data}
+```{r Loading the data, include=F}
 
-#setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
-#setwd("E:/MS/PAR/GroupProject")
+# setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
+setwd("E:/MS/PAR/GroupProject")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv')
 dim(dt.train)
-
-str(dt.train)
-
-```
-
-The variable "ID" is a unique identifier of each observation in the data set and is of no use for the analysis. Hence, this has been removed.
-
-```{r Removing "ID"}
-
-dt.train$Id <- NULL
-
-dim(dt.train)
-
 str(dt.train)
 
 ```
@@ -91,25 +78,29 @@ Certain columns have missing values(NAs). Below is the summary of all missing va
 
 ```{r Summarizing information on missing values}
 
-data.frame(colSums(sapply(dt.train, is.na)))
-
-# colSums(sapply(dt.train[,.SD, .SDcols = cat_var], is.na))
+kable(data.frame(colSums(sapply(dt.train, is.na))))
 
 ```
 
 NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avod this, we performed Imputation and Include methods on these variables. Imputation is a process of replacing missing data with an estimated value based on other available information.
 
-```{r Performing Imputation on numeric variables}
+```{r Performing Imputation on numeric variables3, include=F}
 
 aimp <- amelia(dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))], m = 25)
 
 summary(aimp)
 
+```
+
+```{r Performing Imputation on numeric variables1, include=T}
 plot(aimp)
 
 par(mfrow=c(1,1))
 
-head(aimp$imputations[[1]])
+```
+
+```{r Performing Imputation on numeric variables2, include=F}
+# head(aimp$imputations[[1]])
 
 #aimp$imputations$imp25$LotFrontage
 
@@ -124,7 +115,7 @@ dt.train$LotFrontage <- bagImpute$LotFrontage
 
 NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
 
-```{r Handling NAs in character variables}
+```{r Handling NAs in character variables, include=F}
 
 dt.train$Alley <- ifelse(is.na(dt.train$Alley),"No Alley", dt.train$Alley)
 
@@ -166,22 +157,22 @@ Observe that all the NAs have been replaced meaningfully
 
 ```{r Calcualting number of NAs in all the variables}
 
-data.frame(colSums(sapply(dt.train, is.na)))
+kable(data.frame(colSums(sapply(dt.train, is.na))))
 
 ```
 
 The variables which have character values describe categories of multiple feautures that are desired by the buyers. Also, "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "TotRmsAbvGrd", "Fireplaces" have interger values which practically divide the houses based on the quantity of respective features available in the house. Hence, it makes more sense to factor these character variables as categorical
 
-```{r Factorizing variables}
+```{r Factorizing variables, include=F}
 
 char_var <- names(dt.train)[which(sapply(dt.train, is.character))]
 
-allCateg_var <- c(char_var, 'OverallQual', 'OverallCond', 'YearBuilt', 'YearRemodAdd', 'TotRmsAbvGrd', 'Fireplaces')
+# allCateg_var <- c(char_var, 'OverallQual', 'OverallCond', 'YearBuilt', 'YearRemodAdd', 'TotRmsAbvGrd', 'Fireplaces')
 
 numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
-allNumeric_var <- setdiff(numeric_var, c( 'OverallQual', 'OverallCond', 'YearBuild', 'YearRemodAdd','TotRmsAbvGrd','Fireplaces'))
+# allNumeric_var <- setdiff(numeric_var, c( 'OverallQual', 'OverallCond', 'YearBuild', 'YearRemodAdd','TotRmsAbvGrd','Fireplaces'))
 
-for(name in allCateg_var){
+for(name in char_var){
   #print(name)
   dt.train[[name]] <- factor(dt.train[[name]])
 }
@@ -190,9 +181,9 @@ for(name in allCateg_var){
 
 ### DATA VISUALIZATION
 
-```{r Correlation Plot}
+```{r Correlation Plot, include=T}
 
-correlations <- cor(dt.train[, allNumeric_var], use = "everything")
+correlations <- cor(dt.train[, numeric_var], use = "everything")
 corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.cex=0.8, tl.col = "grey")
 
 ```
@@ -206,6 +197,7 @@ lines(density(sale_price$dt.train.SalePrice))
 max(sale_price)
 
 #Skewed to the right
+
 #df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
 #View(df.corr)
 
@@ -213,7 +205,7 @@ max(sale_price)
 
 ### MODEL AND MODEL DEVELOPMENT
 
-```{r}
+```{r, include=F}
 
 names(dt.train)
 
@@ -232,8 +224,30 @@ lm.all <- standardize(
     , data = dt.train
   )
 )
+```
 
+```{r, include=T}
 
+summary(lm.all)
+# coefplot(lm.all)
+
+coefs <-  as.data.frame(summary(lm.all)$coefficients)
+coefs$vars <-  rownames(coefs)
+coefs$estabs <- abs(coefs$Estimate)
+coefs.20 <- coefs[order(-coefs$estabs, -coefs$`Pr(>|t|)`),][1:20,]
+
+ggplot(coefs.20, aes(vars, Estimate)) + 
+  geom_hline(yintercept=0, lty=2, lwd=1, colour="grey50") +
+  geom_point(size=4, pch=21, fill="yellow") +
+  theme_bw()
+
+cat("RMSE of the baseline model with all predictors ", rmse(dt.train$SalePrice, predict(lm.all)))
+
+```
+
+Removing the predicts with NA as coeffiecient, because of mutli corlinearity.
+
+```{r, include=F}
 lm.sel <- standardize(
   lm(
     SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
@@ -251,44 +265,43 @@ lm.sel <- standardize(
   )
 )
 
-summary(lm.all)
-coefplot(lm.all)
+```
 
-table(dt.train$BsmtCond, exclude = F)
 
-rmse(dt.train$SalePrice, predict(lm.all))
+```{r, include=T}
 
-rmse(dt.train$SalePrice, predict(lm.sel))
-step_selection <- step(lm.sel, trace=F, na.action=na.omit)
-summary(step_selection)
+cat("RMSE of the model after removing multicollinear variables with all predictors ", rmse(dt.train$SalePrice, predict(lm.sel)))
+
+```
+
+Picking predictors basing on the Beta coeffiencients and P values.
+
+```{r, include=F}
 
 lm.df <- as.data.frame(coef(summary(lm.sel)))
 
 names(lm.df)
 lm.df$estabs <- abs(lm.df$Estimate)
 
-lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,]
+
+```
 
 
+```{r, include=T}
+
+kable(lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,])
+
+```
+
+New model with just the strong predictors.
+
+```{r, include=T,echo=F}
 lm.sel2 <- lm(SalePrice~RoofMatl+Condition2+PoolQC+OverallQual+RoofStyle+OverallCond+YearBuilt+GarageArea+GrLivArea+TotalBsmtSF,data=dt.train)
+
 summary(lm.sel2)
 
-plot(lm.sel2, which = 1)
+cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel)))  
 
-rmse(dt.train$SalePrice,predict(lm.sel2,dt.train))
-
-linearModel <- lm(SalePrice ~ YrSold + MoSold + LotArea + BedroomAbvGr, data=dt.train)
-
-linearPreds <- data.frame(Id = dt.test$Id, SalePrice= predict(linearModel, dt.test))
-
-rmse(dt.train$SalePrice,predict(linearModel,dt.train))
-
-
-fit1 <- glmnet(dt.train[,which(names(dt.train) %in% c('RoofMatl' ,'Condition2','PoolQC','OverallQual', 'RoofStyle','OverallCond','YearBuilt','GarageArea','GrLivArea','TotalBsmtSF'))], dt.train$SalePrice, family="gaussian", alpha=0.5, lambda=0.001)
-summary(fit1)
-predictions1 <- predict(fit1, x, type="link")
-rmse1 <- mean((y - predictions1)^2)
-print(rmse1)
 
 ```
 
