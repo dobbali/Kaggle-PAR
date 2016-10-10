@@ -109,27 +109,23 @@ max(sale_price)
 
 numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
 df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
-View(df.corr)
+#View(df.corr)
 typeof(df.corr)
 
 #Correlation with Each variables and Sale Price:
 df.sale.corr <- data.frame(abs(df.corr[,38]))
 df.sale.corr$features <- names(df.corr)
-View(df.sale.corr)
+#View(df.sale.corr)
 
 df.sale.corr<- df.sale.corr[order(-df.sale.corr$abs.df.corr...38..),]
-View(df.sale.corr) #Ordered list of Correlations
+#View(df.sale.corr) #Ordered list of Correlations
 
 #Top 5 correlated features
 top5Corr <- df.sale.corr[2:7,]
-View(top5Corr)
-#checking multicolinearlity
-View(df.corr)
 
-#1stFlrSF TotalBsmtSF 0.819529975005
-#GrLivArea TotRmsAbvGrd 0.825489374309
-#GarageYrBlt YearBuilt 0.825667484174
-#GarageArea GarageCars 0.882475414281
+df.corr
+
+
 
 #Scatter Plots for Numerical 
 
@@ -180,8 +176,6 @@ boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col
 
 ```
 
-
-```
 
 
 NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avod this, we performed Imputation and Include methods on these variables. Imputation is a process of replacing missing data with an estimated value based on other available information.
@@ -263,6 +257,30 @@ kable(data.frame(colSums(sapply(dt.train, is.na))))
 
 ```
 
+
+```{r inspecting multicolinearity, include=F}
+
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+
+df.mul.cor <- NULL 
+for(i in 1:nrow(df.corr)){
+  for(j in 1:i){
+    df.temp <- NULL
+    if(!is.na(df.corr[i,j])){
+      if(df.corr[i,j] >= 0.6 && df.corr[i,j] != 1){
+        df.temp$name1 <- names(df.corr)[i]
+        df.temp$name2 <- names(df.corr)[j]
+        df.temp$cor <- df.corr[i,j]
+        df.mul.cor <- rbind(df.mul.cor,df.temp)
+      }
+    }
+  }
+}
+df.mul.cor <- as.data.frame(df.mul.cor)
+
+subset(df.mul.cor, name1 != "SalePrice")
+
+```
 The variables which have character values describe categories of multiple feautures that are desired by the buyers. Also, "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "TotRmsAbvGrd", "Fireplaces" have interger values which practically divide the houses based on the quantity of respective features available in the house. Hence, it makes more sense to factor these character variables as categorical
 
 ```{r Factorizing variables, include=F}
@@ -307,7 +325,7 @@ max(sale_price)
 
 ### MODEL AND MODEL DEVELOPMENT
 
-```{r, include=F}
+```{r, include=T,echo=F}
 
 names(dt.train)
 
@@ -348,14 +366,15 @@ cat("RMSE of the baseline model with all predictors ", rmse(dt.train$SalePrice, 
 ```
 
 Removing the predicts with NA as coeffiecient, because of mutli corlinearity.
+Exterior2nd, BsmtCond,  BsmtFinType1, TotalBsmtSF, Electrical, GarageFinish, GarageCond, GrLivArea, GarageQual
 
-```{r, include=F}
+```{r, include=T, echo=F}
 lm.sel <- standardize(
   lm(
     SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
     LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 +   Condition2 +   BldgType +    
     HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +    RoofMatl +     Exterior1st + 
-    # Exterior2nd +    BsmtCond +  BsmtFinType1 TotalBsmtSF Electrical GarageFinish GarageCond +  GrLivArea GarageQual
+    # 
       MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +   BsmtQual +    
     BsmtExposure  + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF      +  Heating +     
     HeatingQC +    CentralAir +     X1stFlrSF +    X2ndFlrSF +    LowQualFinSF  +    BsmtFullBath +
@@ -385,7 +404,6 @@ lm.df <- as.data.frame(coef(summary(lm.sel)))
 names(lm.df)
 lm.df$estabs <- abs(lm.df$Estimate)
 
-
 ```
 
 
@@ -398,12 +416,18 @@ kable(lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,])
 New model with just the strong predictors.
 
 ```{r, include=T,echo=F}
-lm.sel2 <- lm(SalePrice~RoofMatl+Condition2+PoolQC+OverallQual+RoofStyle+OverallCond+YearBuilt+GarageArea+GrLivArea+TotalBsmtSF,data=dt.train)
+
+lm.sel2 <- lm(SalePrice ~ RoofMatl+Condition2+PoolQC+OverallQual+RoofStyle+OverallCond+YearBuilt+GarageArea+GrLivArea+TotalBsmtSF,data=dt.train)
 
 summary(lm.sel2)
 
-cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel)))  
+cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel2)))  
 
 
 ```
 
+
+```{r, include=T,echo=F}
+
+
+```
