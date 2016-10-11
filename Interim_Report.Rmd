@@ -1,10 +1,12 @@
 ---
 title: "GroupProject-InterimReport"
+author: "Sai Deepthi Mattam, Sri Harsha Samanthula"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 ### INTRODUCTION
@@ -33,7 +35,19 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("RColorBrewer")
 # install.packages("lars")
 # install.packages("glmnet")
+# install.packages("ggplot2")
+# install.packages("devtools")
+# install_github("easyGgplot2", "kassambara")
+# install.packages("FSelector")
+# install.packages("mlbench")
 
+
+
+library(FSelector)
+library(mlbench)
+# library(easyGgplot2)
+# library(devtools)
+library(ggplot2)
 library(glmnet)
 library(lars)
 library(RColorBrewer)
@@ -60,29 +74,155 @@ rmse <- function(y, yhat) {
 
 ```
 
-### DATA CLEANING AND DATA MODELLING
+### DATA EXPLORATION
 
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
 setwd("E:/MS/PAR/GroupProject")
+# setwd('/Users/mdobbali/Google Drive/University/Classes/Pred with R/Data/')
+
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv')
 dim(dt.train)
 str(dt.train)
 
+
 ```
 
 Certain columns have missing values(NAs). Below is the summary of all missing value information.
 
-```{r Summarizing information on missing values}
+```{r Summarizing information on missing values, include=T,echo=F}
 
-kable(data.frame(colSums(sapply(dt.train, is.na))))
+mis.vars <-data.frame(colSums(sapply(dt.train, is.na)))
+colnames(mis.vars) <- c('No_of_NAs')
+kable(subset(mis.vars, No_of_NAs > 0 ))
 
 ```
 
-NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avod this, we performed Imputation and Include methods on these variables. Imputation is a process of replacing missing data with an estimated value based on other available information.
+```{r, include=F}
+
+mean_sp <- mean(dt.train$SalePrice)
+median_sp <- median(dt.train$SalePrice)
+sd_sp <- sd(dt.train$SalePrice)
+
+sale_price_stats <- data.frame(mean_sp, median_sp, sd_sp)
+```
+
+### DATA VISUALIZATION
+
+Summary statistics of Sales Price
+```{r, include=T,echo=F}
+
+sale_price_stats
+
+sale_price <- data.frame(dt.train$SalePrice)
+
+hist(sale_price$dt.train.SalePrice,xlim = c(1000,800000),main = "Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(sale_price$dt.train.SalePrice))
+
+```
+
+This histogram clearly shows that distribution of SalesPrice is Skewed to the right. To rectify this we need to apply log or power functions to SalesPrice variable.
+
+```{r, include=T,echo=F}
+
+hist(log(sale_price$dt.train.SalePrice),main = "Log of Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(log(sale_price$dt.train.SalePrice)))
+
+```
+
+
+```{r, include=F}
+numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+#View(df.corr)
+typeof(df.corr)
+
+#Correlation with Each variables and Sale Price:
+df.sale.corr <- data.frame(abs(df.corr[,38]))
+df.sale.corr$features <- names(df.corr)
+#View(df.sale.corr)
+
+df.sale.corr<- df.sale.corr[order(-df.sale.corr$abs.df.corr...38..),]
+#View(df.sale.corr) #Ordered list of Correlations
+
+#Top 5 correlated features
+top5Corr <- df.sale.corr[2:7,]
+
+```
+
+Top 5 Correlation Numerical Variables
+
+```{r , include=T,echo=F}
+
+colnames(top5Corr)<- c("Cors","Features")
+
+kable(top5Corr)
+
+```
+
+
+
+
+Exploring features using Scatterplots, BoxPlots etc
+
+```{r , include=T,echo=F}
+
+#Scatter Plots for Numerical 
+
+options(scipen=5)
+plot(dt.train$GrLivArea, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
+  	xlab="Garage Liv Area ", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GrLivArea), col="black") # regression line 
+
+plot(dt.train$GarageArea, dt.train$SalePrice, main="Scatterplot: GarageArea vs SalePrice", 
+  	xlab="Garage Area ", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GarageArea), col="black") # regression line
+
+plot(dt.train$TotalBsmtSF, dt.train$SalePrice, main="Scatterplot: TotalBsmtSF vs SalePrice", 
+  	xlab="TotalBsmtSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(1, 3000))
+abline(lm(dt.train$SalePrice~dt.train$TotalBsmtSF), col="black") # regression line
+
+plot(dt.train$X1stFlrSF, dt.train$SalePrice, main="Scatterplot: X1stFlrSF vs SalePrice", 
+  	xlab="X1stFlrSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(250, 2500))
+abline(lm(dt.train$SalePrice~dt.train$X1stFlrSF), col="black") # regression line
+
+
+plot(dt.train$YearBuilt, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
+  	xlab="Year Built ", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$YearBuilt), col="black") # regression line 
+
+
+#Categorical Varaible
+
+p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice))
+p + geom_violin(scale = "width")
+p + geom_violin(fill = "yellow", colour = "red")
+
+
+boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
+  col=(c("gold","darkgreen")),
+  main="Overall House Condition and Price", xlab="Overall Quality")
+
+boxplot(dt.train$SalePrice~dt.train$GarageCars, data=dt.train, notch=FALSE, 
+  col=(c("gold","red")),
+  main="Garage Cars and Price", xlab="Overall Quality")
+
+barplot(table(dt.train$Neighborhood),width = 0.5, main="Neighbourhood Distribution", las = 3,axisnames = TRUE, col = "Red", border = "yellow")
+
+
+dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
+boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
+  main="Bathrooms and Sales price", xlab="Total Bathrooms")
+
+```
+
+### DATA CLEANING
+
+NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avoid this, Imputation has been performed and Include
+methods on these variables. Imputation is a process of replacing missing data with an estimated value based on other available information.
 
 ```{r Performing Imputation on numeric variables3, include=F}
 
@@ -92,10 +232,11 @@ summary(aimp)
 
 ```
 
-```{r Performing Imputation on numeric variables1, include=T}
+Imputation with Amelia.
+
+```{r Performing Imputation on numeric variables1, include=T,echo=F}
 plot(aimp)
 
-par(mfrow=c(1,1))
 
 ```
 
@@ -153,15 +294,55 @@ dt.train$MiscFeature <- ifelse(is.na(dt.train$MiscFeature),"NoFence", dt.train$M
 
 ```
 
-Observe that all the NAs have been replaced meaningfully
 
-```{r Calcualting number of NAs in all the variables}
 
+```{r Calcualting number of NAs in all the variables, include=F}
+
+# Observe that all the NAs have been replaced meaningfully
 kable(data.frame(colSums(sapply(dt.train, is.na))))
 
 ```
 
-The variables which have character values describe categories of multiple feautures that are desired by the buyers. Also, "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "TotRmsAbvGrd", "Fireplaces" have interger values which practically divide the houses based on the quantity of respective features available in the house. Hence, it makes more sense to factor these character variables as categorical
+Viewing the Correlation Plot after 
+
+```{r Correlation Plot, include=T,echo=F}
+
+correlations <- cor(dt.train[, numeric_var], use = "everything")
+corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.col = "grey",tl.cex = 0.6)
+
+```
+
+Inspecting Multicolinearity between features in order to eliminate highly corelated features.
+
+```{r inspecting multicolinearity, include=F}
+
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+
+df.mul.cor <- NULL 
+for(i in 1:nrow(df.corr)){
+  for(j in 1:i){
+    df.temp <- NULL
+    if(!is.na(df.corr[i,j])){
+      if(df.corr[i,j] >= 0.6 && df.corr[i,j] != 1){
+        df.temp$name1 <- names(df.corr)[i]
+        df.temp$name2 <- names(df.corr)[j]
+        df.temp$cor <- df.corr[i,j]
+        df.mul.cor <- rbind(df.mul.cor,df.temp)
+      }
+    }
+  }
+}
+df.mul.cor <- as.data.frame(df.mul.cor)
+```
+
+```{r, include=T, echo=F}
+
+df.mul.cor <- subset(df.mul.cor, name1 != "SalePrice")
+kable(df.mul.cor, row.names=FALSE)
+
+```
+
+Converting character variables into factors/catergorical variables.  
 
 ```{r Factorizing variables, include=F}
 
@@ -179,88 +360,89 @@ for(name in char_var){
 
 ```
 
-### DATA VISUALIZATION
-
-```{r Correlation Plot, include=T}
-
-correlations <- cor(dt.train[, numeric_var], use = "everything")
-corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.cex=0.8, tl.col = "grey")
-
-```
-
-```{r Histogram of Sale Price}
-
-sale_price <- data.frame(dt.train$SalePrice)
-
-hist(sale_price$dt.train.SalePrice,xlim = c(1000,800000),main = "Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
-lines(density(sale_price$dt.train.SalePrice))
-max(sale_price)
-
-#Skewed to the right
-
-#df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
-#View(df.corr)
-
-```
-
 ### MODEL AND MODEL DEVELOPMENT
 
-```{r, include=F}
+Creating a base Linear Model using all the predictors.
 
-names(dt.train)
+```{r, include=T,echo=T}
 
 lm.all <- standardize(
   lm(
-    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
-    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 +   Condition2 +   BldgType +    
-    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +    RoofMatl +     Exterior1st + 
-    Exterior2nd +  MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +   BsmtQual +     BsmtCond +    
-    BsmtExposure + BsmtFinType1 + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF +    TotalBsmtSF +  Heating +     
-    HeatingQC +    CentralAir +   Electrical +   X1stFlrSF +    X2ndFlrSF +    LowQualFinSF + GrLivArea +    BsmtFullBath +
-    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr + KitchenQual +  TotRmsAbvGrd + Functional +  
-    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +  GarageFinish + GarageCars +   GarageArea +   GarageQual +  
-    GarageCond +   PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch +   ScreenPorch +  PoolArea +    
-    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold +       YrSold +       SaleType +     SaleCondition
+    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +      
+      Alley +        LotShape +    
+    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 + 
+      Condition2 +   BldgType +    
+    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +   
+      RoofMatl +     Exterior1st + 
+    Exterior2nd +  MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +  
+      BsmtQual +     BsmtCond +    
+    BsmtExposure + BsmtFinType1 + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF +  
+      TotalBsmtSF +  Heating +     
+    HeatingQC +    CentralAir +   Electrical +   X1stFlrSF +    X2ndFlrSF +    LowQualFinSF 
+    + GrLivArea +    BsmtFullBath +
+    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr + KitchenQual
+    +  TotRmsAbvGrd + Functional +  
+    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +  GarageFinish + GarageCars
+    +   GarageArea +   GarageQual +  
+    GarageCond +   PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch 
+    +   ScreenPorch +  PoolArea +    
+    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold +       YrSold +  
+      SaleType +     SaleCondition
     , data = dt.train
   )
 )
 ```
 
-```{r, include=T}
+```{r, include=F}
 
 summary(lm.all)
-# coefplot(lm.all)
 
 coefs <-  as.data.frame(summary(lm.all)$coefficients)
 coefs$vars <-  rownames(coefs)
 coefs$estabs <- abs(coefs$Estimate)
-coefs.20 <- coefs[order(-coefs$estabs, -coefs$`Pr(>|t|)`),][1:20,]
+coefs.20 <- coefs[order(-coefs$estabs, -coefs$`Pr(>|t|)`),][1:5,]
 
 ggplot(coefs.20, aes(vars, Estimate)) + 
   geom_hline(yintercept=0, lty=2, lwd=1, colour="grey50") +
   geom_point(size=4, pch=21, fill="yellow") +
   theme_bw()
 
+```
+
+```{r, include=T,echo=F}
+
+# coefplot(lm.all)
+
+
 cat("RMSE of the baseline model with all predictors ", rmse(dt.train$SalePrice, predict(lm.all)))
 
 ```
 
-Removing the predicts with NA as coeffiecient, because of mutli corlinearity.
+Removing the predictor with NAs as coeffiecient, because of multi colinearity
+Exterior2nd, BsmtCond,  BsmtFinType1, TotalBsmtSF, Electrical, GarageFinish, GarageCond, GrLivArea, GarageQual
 
-```{r, include=F}
+```{r, include=T, echo=T}
 lm.sel <- standardize(
   lm(
-    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street +       Alley +        LotShape +    
-    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood + Condition1 +   Condition2 +   BldgType +    
-    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd + RoofStyle +    RoofMatl +     Exterior1st + 
-    # Exterior2nd +    BsmtCond +  BsmtFinType1 TotalBsmtSF Electrical GarageFinish GarageCond +  GrLivArea GarageQual
+    SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street + 
+      Alley +        LotShape +    
+    LandContour +  Utilities +    LotConfig +    LandSlope +    Neighborhood +
+      Condition1 +   Condition2 +   BldgType +    
+    HouseStyle +   OverallQual +  OverallCond +  YearBuilt +    YearRemodAdd +
+      RoofStyle +    RoofMatl +     Exterior1st + 
+    # 
       MasVnrType +   MasVnrArea +   ExterQual +    ExterCond +    Foundation +   BsmtQual +    
     BsmtExposure  + BsmtFinSF1 +   BsmtFinType2 + BsmtFinSF2 +   BsmtUnfSF      +  Heating +     
-    HeatingQC +    CentralAir +     X1stFlrSF +    X2ndFlrSF +    LowQualFinSF  +    BsmtFullBath +
-    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr + KitchenQual +  TotRmsAbvGrd + Functional +  
-    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +    GarageCars +   GarageArea  +  
-     PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch +   ScreenPorch +  PoolArea +    
-    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold +       YrSold +       SaleType +     SaleCondition
+    HeatingQC +    CentralAir +     X1stFlrSF +    X2ndFlrSF +   
+      LowQualFinSF  +    BsmtFullBath +
+    BsmtHalfBath + FullBath +     HalfBath +     BedroomAbvGr + KitchenAbvGr
+    + KitchenQual +  TotRmsAbvGrd + Functional +  
+    Fireplaces +   FireplaceQu +  GarageType +   GarageYrBlt +  
+      GarageCars +   GarageArea  +  
+     PavedDrive +   WoodDeckSF +   OpenPorchSF +  EnclosedPorch + X3SsnPorch + 
+      ScreenPorch +  PoolArea +    
+    PoolQC +       Fence +        MiscFeature +  MiscVal +      MoSold + 
+      YrSold +       SaleType +     SaleCondition
     , data = dt.train
   )
 )
@@ -268,7 +450,7 @@ lm.sel <- standardize(
 ```
 
 
-```{r, include=T}
+```{r, include=T,echo=F}
 
 cat("RMSE of the model after removing multicollinear variables with all predictors ", rmse(dt.train$SalePrice, predict(lm.sel)))
 
@@ -283,25 +465,107 @@ lm.df <- as.data.frame(coef(summary(lm.sel)))
 names(lm.df)
 lm.df$estabs <- abs(lm.df$Estimate)
 
-
 ```
 
 
-```{r, include=T}
+```{r, include=T,echo=F}
 
 kable(lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,])
 
 ```
 
-New model with just the strong predictors.
+New model with just the strong predictors picked from above, and strongly corelated variables. 
 
 ```{r, include=T,echo=F}
-lm.sel2 <- lm(SalePrice~RoofMatl+Condition2+PoolQC+OverallQual+RoofStyle+OverallCond+YearBuilt+GarageArea+GrLivArea+TotalBsmtSF,data=dt.train)
 
-summary(lm.sel2)
+lm.sel2 <- lm(SalePrice ~ RoofMatl+Condition2+PoolQC+OverallQual+RoofStyle+OverallCond+YearBuilt+GarageArea+GrLivArea+TotalBsmtSF,data=dt.train)
 
-cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel)))  
+# summary(lm.sel2)
 
+cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel2)))  
 
 ```
 
+Using FSelector, and performing Chisquare test to pick important features.
+
+```{r, include=F,echo=F}
+
+weights <- chi.squared(SalePrice~., dt.train)
+print(weights)
+subset <- cutoff.k(weights, 5)
+f <- as.simple.formula(subset, "SalePrice")
+
+lm.sel3 <- lm(f,data=dt.train)
+
+summary(lm.sel3)
+
+cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel3)))  
+```
+
+Features obtained:
+```{r, include=T,echo=F}
+print(f)
+
+```
+
+Using CFS test to pick important numercial variables.
+
+```{r, include=F}
+subset <- cfs(SalePrice~., dt.train)
+f <- as.simple.formula(subset, "SalePrice")
+
+
+```
+Features obtained.
+```{r, include=T,echo=F}
+print(f)
+```
+
+For Feature selections we used chi.squared which will find weights of discrete attributes.This shows us the most important features out of all available variables. The features obtained according to this test are :  OverallQual, FullBath, Neightbourhood, Fireplace, GarageCar . So, these are most influential categorical variables. Correlation based feature selection has also been used to identity the most important numerical variables. Numerical variables obtained in this test are : Overall Qual, GarageCar,   TotalBasment,  GrLivArea
+
+Final Model with just the Top 5 predictors.
+
+```{r, include=T,echo=T}
+lm.sel4 <- standardize(lm(SalePrice ~ OverallQual  + TotalBsmtSF 
+                          + GrLivArea + GarageCars + Neighborhood ,data=dt.train))
+
+```
+
+```{r, include=T,echo=F}
+
+# summary(lm.sel4)
+cat("RMSE of the final model", rmse(dt.train$SalePrice, predict(lm.sel4)))  
+
+```
+
+After brainstorming about general features considered by people to make a decision about a house, conclusion have been made that above features are considered more often than other available variables
+
+Exploring the residual plot of the final model
+
+```{r, include=T,echo=F}
+plot(lm.sel4,which = 1)
+```
+
+including the quadratic term of Quality variables to address the non linearity
+
+```{r, include=F,echo=F}
+lm.sel5 <- standardize(lm(SalePrice ~ OverallQual + I(OverallQual^2) + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea ,data=dt.train))
+```
+
+```{r, include=T, echo=T}
+cat("RMSE of the final model with quadratic term and interaction", rmse(dt.train$SalePrice, predict(lm.sel5)))  
+```
+
+Residual plot of the final model after adding the quadratic variable and interaction term
+
+```{r, include=T,echo=F}
+
+plot(lm.sel5,which = 1)
+
+```
+
+### NEXT STEPS
+ After the initial attempts and computations, these following steps have been planned to improve the model
+ 
+1. Use ensemble to improve the model performance
+2. Try various combinatons of interactions between variables and try building model with various forms such as quadratic, power forms.
