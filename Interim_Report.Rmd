@@ -41,8 +41,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("FSelector")
 # install.packages("mlbench")
 
-
-
 library(FSelector)
 library(mlbench)
 # library(easyGgplot2)
