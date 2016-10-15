@@ -251,6 +251,8 @@ dt.train$MasVnrArea <- bagImpute$MasVnrArea
 dt.train$LotFrontage <- bagImpute$LotFrontage
 
 ```
+Here, out of 80 varaibles, there are only 3 variables missing and those three X NA's. Single imputations works well in this case. So, we used Bagimpute 
+
 
 NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
 
