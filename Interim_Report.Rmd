@@ -1,6 +1,6 @@
 ---
 title: "GroupProject-InterimReport"
-author: "Sai Deepthi Mattam, Sri Harsha Samanthula"
+author: "Sai Deepthi Matam, Sri Harsha Samanthula"
 output: pdf_document
 ---
 
@@ -295,6 +295,7 @@ p + geom_violin(scale = "width")
 p + geom_violin(fill = "yellow", colour = "red")
 print("This violin plot shows probability density of the data at different values. For a house with maximum(10) Over all Quality has very high spread and distribution is close to normal where as Over all Quality with 2 has no standard probability and has minimum spread. Rest of the values has close to normal distribution with mean value increasing as the Over all Quality increase ")
 
+par(mfrow=c(2,1))
 boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
   col=(c("gold","darkgreen")),
   main="Overall House Condition and Price", xlab="Overal Condition")
@@ -309,6 +310,11 @@ dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
 boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
   main="Bathrooms and Sales price", xlab="Total Bathrooms")
 print("Data given has Full and Half bathrooms. Here, we combined those columns to see data so that both full and half bathroom quantity is quantized in a single value. Box plot clearly shows that prices for each value of 1,1.5, 2 and 2.5 house prices are quite similar to each other as the width of box is short  ")
+
+boxplot(dt.train$SalePrice~dt.train$Neighborhood, data =dt.train, notch = FALSE,col=(c("gold","red")),
+  main="Neighborhood and Sales price", xlab="Neighborhood", las=2)
+print(" ")
+
 
 ```
 
@@ -581,20 +587,24 @@ Modifying the model futher by
 dt.train$OverallQual <- factor(dt.train$OverallQual)
 
 lm.sel5 <- (lm(SalePrice ~ OverallQual + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea ,data=dt.train))
-summary(lm.sel5)
+summary(standardize(lm.sel5))
 dt.train$Neighborhood[2]
-
+dt.train
+summary(dt.train$GrLivArea)
 dt<- NULL
 dt$OverallQual <- 10
-dt$Neighborhood <- "Sawyer"
+dt$Neighborhood <- "Blmngtn"
 dt$TotalBsmtSF <- 0
 dt$GrLivArea <- 0
 dt$GarageCars <- 0
+dt$OverallQual <- factor(dt$OverallQual)
+dt$Neighborhood <- factor(dt$Neighborhood)
 dt <- data.frame(dt)
 predict(lm.sel5, newdata = dt[1,])
 
 plot(dt.train$GrLivArea,dt.train$SalePrice)
 
+aggregate(SalePrice~Neighborhood, data = dt.train, median)
 
 ```
 
@@ -604,19 +614,11 @@ cat("RMSE of the final model with quality as factor and interaction term", rmse(
 ```
 
 
-After analysing the model, it is evident that Neighbourhood is one of the significant factor in deciding sales price. Especially, ClearCr neighbourhood has great contribution to the price. a house in Edwards  costs approximately $165809 more than Blmngtn Neighborhood. 
-On the other hand, No Ridge  Neighbourhood has negative effect on sales price. Presence of house in this neighbourhood with all other being same will decrease the cost by nearly $69445.
-###### -- can remove
-Surprisingly, GrlivArea - Liv Area above ground is one of the most significant factor to contribute to Sales price. With all other being same, one unit increase in the GrLivArea will increase sales price by $103597. 
+After analysing the model, it is evident that Neighbourhood is one of the significant factor in deciding sales price. Especially, a house in NoRidge neighbourhood with one unit more GrLivArea compared to Blmgtn results in 110061($30891-$24902+$104072) of price increase
 
-Also when there is one unit increase in GrlivArea and house is in the StoneBr Neighborhood, there approximately the house price is increased by $32911 additionally.
+A well known fact which is usually considered for deciding a house price is : overallqual. A house with Quality 10 cost approximately  $1,62,181 more than a Quality 1 house with all other factors being same.
 
-#######
-A well known fact which is usually considered for deciding a house price is : overallqual. A house with Quality 10 cost approximately  162181 more than a Quality 1 house.
-
-######  -- non able to understand the interpretation here
-TotalBsmtSf, GrlivArea - Total basement square feet and GarageCars - Number of cat that fit in Garage are popularly considered  important and model also reflects the same. With everything else being same, one unit in increase of Total basement area there is a price bump of $26747 and one unit increase in number of cars that can fit in car is $17357.75
-
+One unit increase in TotalBsmtSF results in an increase of approximately $26000 increase in sales prices with all other factors being same.Number of cars in Garage has good contribution to the sales price with $17640 of increase in price with every extra cars space a house has with all other factors being same.
 
 Residual plot of the final model after adding the quadratic variable and interaction term
 
@@ -626,15 +628,6 @@ plot(lm.sel5,which = 1)
 
 ```
 Residual Plot show that the residuals and the predicted values do not follow any linear relationship. Data points are randomly distributed. This indicates that the linear model above is appropriate for the data. 
-
-
-```{r, include=F, echo=F}
-lm.bt <- train(SalePrice ~ OverallQual + I(OverallQual^2) + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea, data= dt.train, 
-            method="rf")
-
-summary(lm.bt)
-
-```
 
 
 ### NEXT STEPS
