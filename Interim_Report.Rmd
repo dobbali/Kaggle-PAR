@@ -345,9 +345,9 @@ for(i in 1:nrow(df.corr)){
 }
 df.mul.cor <- as.data.frame(df.mul.cor)
 
-print("Above function helps to understand the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors ")
-
 ```
+
+Following table contains the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors 
 
 ```{r, include=T, echo=F}
 
@@ -378,7 +378,7 @@ for(name in char_var){
 
 Creating a base Linear Model using all the predictors.
 
-```{r, include=T,echo=T}
+```{r, include=F,echo=F}
 
 lm.all <- standardize(
   lm(
@@ -443,7 +443,7 @@ Base model served two purposes.
 Removing the predictor with NAs as coeffiecient because of multi colinearity.
 These are the predictors removed:Exterior2nd, BsmtCond,  BsmtFinType1, TotalBsmtSF, Electrical, GarageFinish, GarageCond, GrLivArea, GarageQual
 
-```{r, include=T, echo=T}
+```{r, include=F, echo=F}
 lm.sel <- standardize(
   lm(
     SalePrice ~ MSSubClass +   MSZoning +     LotFrontage +  LotArea +      Street + 
@@ -492,11 +492,12 @@ lm.df$estimate_absolute_estimates <- abs(lm.df$Estimate)
 
 ```{r, include=T,echo=F}
 
-kable(lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,])
+kable(lm.df[order(-lm.df$estimate_absolute_estimates, -lm.df$`Pr(>|t|)`),][1:20,])
 
 ```
 
 New model after selecting the strong predictors picked from above, and strongly corelated variables. 
+RoofMatl, Condition2, PoolQC, OverallQual, RoofStyle, OverallCond, YearBuilt, GarageArea, GrLivArea, TotalBsmtSF
 
 ```{r, include=T,echo=F}
 
@@ -521,12 +522,15 @@ lm.sel3 <- lm(f,data=dt.train)
 
 summary(lm.sel3)
 
-cat("RMSE of the model with selected variables", rmse(dt.train$SalePrice, predict(lm.sel3)))  
+print(f)
+
 ```
 
 Features obtained:
+FullBath + Fireplaces + OverallQual + GarageCars + Neighborhood
 ```{r, include=T,echo=F}
-print(f)
+
+cat("RMSE of the model with selected variables from chi-squared test", rmse(dt.train$SalePrice, predict(lm.sel3)))  
 
 ```
 
@@ -538,8 +542,9 @@ f <- as.simple.formula(subset, "SalePrice")
 
 
 ```
-Features obtained.
-```{r, include=T,echo=F}
+Features obtained :
+OverallQual + TotalBsmtSF + GrLivArea + GarageCars
+```{r, include=F,echo=F}
 print(f)
 ```
 
@@ -550,12 +555,12 @@ Final Model with just the Top 5 predictors.
 ```{r, include=T,echo=T}
 lm.sel4 <- standardize(lm(SalePrice ~ OverallQual  + TotalBsmtSF 
                           + GrLivArea + GarageCars + Neighborhood ,data=dt.train))
+summary(lm.sel4)
 
 ```
 
 ```{r, include=T,echo=F}
 
-summary(lm.sel4)
 cat("RMSE of the final model", rmse(dt.train$SalePrice, predict(lm.sel4)))  
 
 ```
@@ -568,22 +573,50 @@ Exploring the residual plot of the final model
 plot(lm.sel4,which = 1)
 ```
 
-including the quadratic term of Quality variables to address the non linearity
-
+Modifying the model futher by 
+  1. Converting Quality variable into factor variable to take into account the bin like effect on the SalePrice
+  2. Adding a interaction between Neighborhood ad Quality
+  
 ```{r, include=F,echo=F}
-lm.sel5 <- standardize(lm(SalePrice ~ OverallQual + I(OverallQual^2) + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea ,data=dt.train))
-```
+dt.train$OverallQual <- factor(dt.train$OverallQual)
 
-After analysing the model, it is evident that Neighbourhood is one of the significant factor in deciding sales price. Especially, StoneBr neighbourhood has great contribution to the price. a house in StoneBr costs approximately $73000 more than _______________. 
-On the other hand, No Ridge  Neighbourhood has negative effect on sales price. Presence of house in this neighbourhood with all other being same will decrease the cost by nearly $29000.
-Surprisingly, GrlivArea - Liv Area above ground is one of the most significant factor to contribute to Sales price. With all other being same, one unit increase in the GrLivArea will increase sales price by $103597. 
-A well known fact which is usually considered for deciding a house price is : overallqual. With one unit increase in overall quality, there is approximately $48000 increase in Sales Price. 
-TotalBsmtSf - Total basement square feet and GarageCars - Number of cat that fit in Garage are popularly considered  important and model also reflects the same. With everything else being same, one unit in increase of Total basement area there is a price bump of $26747 and one unit increase in number of cars that can fit in car is $17357.75
+lm.sel5 <- (lm(SalePrice ~ OverallQual + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea ,data=dt.train))
+summary(lm.sel5)
+dt.train$Neighborhood[2]
+
+dt<- NULL
+dt$OverallQual <- 10
+dt$Neighborhood <- "Sawyer"
+dt$TotalBsmtSF <- 0
+dt$GrLivArea <- 0
+dt$GarageCars <- 0
+dt <- data.frame(dt)
+predict(lm.sel5, newdata = dt[1,])
+
+plot(dt.train$GrLivArea,dt.train$SalePrice)
+
+
+```
 
 
 ```{r, include=T, echo=T}
-cat("RMSE of the final model with quadratic term and interaction", rmse(dt.train$SalePrice, predict(lm.sel5)))  
+cat("RMSE of the final model with quality as factor and interaction term", rmse(dt.train$SalePrice, predict(lm.sel5)))  
 ```
+
+
+After analysing the model, it is evident that Neighbourhood is one of the significant factor in deciding sales price. Especially, ClearCr neighbourhood has great contribution to the price. a house in Edwards  costs approximately $165809 more than Blmngtn Neighborhood. 
+On the other hand, No Ridge  Neighbourhood has negative effect on sales price. Presence of house in this neighbourhood with all other being same will decrease the cost by nearly $69445.
+###### -- can remove
+Surprisingly, GrlivArea - Liv Area above ground is one of the most significant factor to contribute to Sales price. With all other being same, one unit increase in the GrLivArea will increase sales price by $103597. 
+
+Also when there is one unit increase in GrlivArea and house is in the StoneBr Neighborhood, there approximately the house price is increased by $32911 additionally.
+
+#######
+A well known fact which is usually considered for deciding a house price is : overallqual. A house with Quality 10 cost approximately  162181 more than a Quality 1 house.
+
+######  -- non able to understand the interpretation here
+TotalBsmtSf, GrlivArea - Total basement square feet and GarageCars - Number of cat that fit in Garage are popularly considered  important and model also reflects the same. With everything else being same, one unit in increase of Total basement area there is a price bump of $26747 and one unit increase in number of cars that can fit in car is $17357.75
+
 
 Residual plot of the final model after adding the quadratic variable and interaction term
 
@@ -595,8 +628,19 @@ plot(lm.sel5,which = 1)
 Residual Plot show that the residuals and the predicted values do not follow any linear relationship. Data points are randomly distributed. This indicates that the linear model above is appropriate for the data. 
 
 
+```{r, include=F, echo=F}
+lm.bt <- train(SalePrice ~ OverallQual + I(OverallQual^2) + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea, data= dt.train, 
+            method="rf")
+
+summary(lm.bt)
+
+```
+
+
 ### NEXT STEPS
  After the initial attempts and computations, these following steps have been planned to improve the model
  
 1. Use ensemble to improve the model performance
 2. Try various combinatons of interactions between variables and try building model with various forms such as quadratic, power forms.
+
+
