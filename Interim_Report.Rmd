@@ -555,7 +555,7 @@ lm.sel4 <- standardize(lm(SalePrice ~ OverallQual  + TotalBsmtSF
 
 ```{r, include=T,echo=F}
 
-# summary(lm.sel4)
+summary(lm.sel4)
 cat("RMSE of the final model", rmse(dt.train$SalePrice, predict(lm.sel4)))  
 
 ```
@@ -573,6 +573,13 @@ including the quadratic term of Quality variables to address the non linearity
 ```{r, include=F,echo=F}
 lm.sel5 <- standardize(lm(SalePrice ~ OverallQual + I(OverallQual^2) + TotalBsmtSF + GrLivArea  + GarageCars + Neighborhood + Neighborhood:GrLivArea ,data=dt.train))
 ```
+
+After analysing the model, it is evident that Neighbourhood is one of the significant factor in deciding sales price. Especially, StoneBr neighbourhood has great contribution to the price. a house in StoneBr costs approximately $73000 more than _______________. 
+On the other hand, No Ridge  Neighbourhood has negative effect on sales price. Presence of house in this neighbourhood with all other being same will decrease the cost by nearly $29000.
+Surprisingly, GrlivArea - Liv Area above ground is one of the most significant factor to contribute to Sales price. With all other being same, one unit increase in the GrLivArea will increase sales price by $103597. 
+A well known fact which is usually considered for deciding a house price is : overallqual. With one unit increase in overall quality, there is approximately $48000 increase in Sales Price. 
+TotalBsmtSf - Total basement square feet and GarageCars - Number of cat that fit in Garage are popularly considered  important and model also reflects the same. With everything else being same, one unit in increase of Total basement area there is a price bump of $26747 and one unit increase in number of cars that can fit in car is $17357.75
+
 
 ```{r, include=T, echo=T}
 cat("RMSE of the final model with quadratic term and interaction", rmse(dt.train$SalePrice, predict(lm.sel5)))  
