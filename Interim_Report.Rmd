@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### INTRODUCTION
 
-  The client's requirement is a real-time effective model to predict final selling price of houses in the city of Ames, Iowa.
+  The primary requirement is a real-time effective model to predict final selling price of houses in the city of Ames, Iowa.
 
 ### OBJECTIVE
 
@@ -72,13 +72,12 @@ rmse <- function(y, yhat) {
 
 ```
 
-### DATA EXPLORATION
 
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
 setwd("E:/MS/PAR/GroupProject")
-# setwd('/Users/mdobbali/Google Drive/University/Classes/Pred with R/Data/')
+setwd('/Users/mdobbali/Google Drive/University/Classes/Pred with R/Data/')
 
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
@@ -108,115 +107,6 @@ sd_sp <- sd(dt.train$SalePrice)
 sale_price_stats <- data.frame(mean_sp, median_sp, sd_sp)
 ```
 
-### DATA VISUALIZATION
-
-Summary statistics of Sales Price
-```{r, include=T,echo=F}
-
-sale_price_stats
-
-sale_price <- data.frame(dt.train$SalePrice)
-
-hist(sale_price$dt.train.SalePrice,xlim = c(1000,800000),main = "Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
-lines(density(sale_price$dt.train.SalePrice))
-
-```
-
-This histogram clearly shows that distribution of SalesPrice is Skewed to the right. To rectify this we need to apply log or power functions to SalesPrice variable.
-
-```{r, include=T,echo=F}
-
-hist(log(sale_price$dt.train.SalePrice),main = "Log of Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
-lines(density(log(sale_price$dt.train.SalePrice)))
-
-```
-
-
-```{r, include=F}
-numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
-df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
-#View(df.corr)
-typeof(df.corr)
-
-#Correlation with Each variables and Sale Price:
-df.sale.corr <- data.frame(abs(df.corr[,38]))
-df.sale.corr$features <- names(df.corr)
-#View(df.sale.corr)
-
-df.sale.corr<- df.sale.corr[order(-df.sale.corr$abs.df.corr...38..),]
-#View(df.sale.corr) #Ordered list of Correlations
-
-#Top 5 correlated features
-top5Corr <- df.sale.corr[2:7,]
-
-```
-
-Top 5 Correlation Numerical Variables
-
-```{r , include=T,echo=F}
-
-colnames(top5Corr)<- c("Cors","Features")
-
-kable(top5Corr)
-
-```
-
-
-
-
-Exploring features using Scatterplots, BoxPlots etc
-
-```{r , include=T,echo=F}
-
-#Scatter Plots for Numerical 
-
-options(scipen=5)
-plot(dt.train$GrLivArea, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
-  	xlab="Garage Liv Area ", ylab="Sales Price ", pch=20, col = "red")
-abline(lm(dt.train$SalePrice~dt.train$GrLivArea), col="black") # regression line 
-
-plot(dt.train$GarageArea, dt.train$SalePrice, main="Scatterplot: GarageArea vs SalePrice", 
-  	xlab="Garage Area ", ylab="Sales Price ", pch=20, col = "red")
-abline(lm(dt.train$SalePrice~dt.train$GarageArea), col="black") # regression line
-
-plot(dt.train$TotalBsmtSF, dt.train$SalePrice, main="Scatterplot: TotalBsmtSF vs SalePrice", 
-  	xlab="TotalBsmtSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(1, 3000))
-abline(lm(dt.train$SalePrice~dt.train$TotalBsmtSF), col="black") # regression line
-
-plot(dt.train$X1stFlrSF, dt.train$SalePrice, main="Scatterplot: X1stFlrSF vs SalePrice", 
-  	xlab="X1stFlrSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(250, 2500))
-abline(lm(dt.train$SalePrice~dt.train$X1stFlrSF), col="black") # regression line
-
-
-plot(dt.train$YearBuilt, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
-  	xlab="Year Built ", ylab="Sales Price ", pch=20, col = "red")
-abline(lm(dt.train$SalePrice~dt.train$YearBuilt), col="black") # regression line 
-
-
-#Categorical Varaible
-
-p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice))
-p + geom_violin(scale = "width")
-p + geom_violin(fill = "yellow", colour = "red")
-
-
-boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
-  col=(c("gold","darkgreen")),
-  main="Overall House Condition and Price", xlab="Overall Quality")
-
-boxplot(dt.train$SalePrice~dt.train$GarageCars, data=dt.train, notch=FALSE, 
-  col=(c("gold","red")),
-  main="Garage Cars and Price", xlab="Overall Quality")
-
-barplot(table(dt.train$Neighborhood),width = 0.5, main="Neighbourhood Distribution", las = 3,axisnames = TRUE, col = "Red", border = "yellow")
-
-
-dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
-boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
-  main="Bathrooms and Sales price", xlab="Total Bathrooms")
-
-```
-
 ### DATA CLEANING
 
 NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avoid this, Imputation has been performed and Include
@@ -235,7 +125,7 @@ Imputation with Amelia.As Amelia is known for better efficiency and reduction in
 ```{r Performing Imputation on numeric variables1, include=T,echo=F}
 plot(aimp)
 
-
+par(mfrow = c(1,1))
 ```
 
 ```{r Performing Imputation on numeric variables2, include=F}
@@ -251,6 +141,7 @@ dt.train$MasVnrArea <- bagImpute$MasVnrArea
 dt.train$LotFrontage <- bagImpute$LotFrontage
 
 ```
+
 Here, out of 80 varaibles, there are only 3 variables that has missing values. Single imputations works well in this case. So, we used Bagimpute 
 
 NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
@@ -302,12 +193,133 @@ kable(data.frame(colSums(sapply(dt.train, is.na))))
 
 ```
 
-Viewing the Correlation Plot after 
+
+
+### DATA VISUALIZATION
+
+To understand the spread of the Sale Price of houses in Ames.  
+
+```{r, include=T,echo=F}
+
+cat("Mean : " , sale_price_stats[,1])
+cat("Median : " , sale_price_stats[,2])
+cat("Standard Deviation : " , sale_price_stats[,3])
+```
+
+Here the Mean > Median which indicates a right skew in the data. The same is also plotted below:
+
+```{r, include=T, echo=F}
+
+sale_price <- data.frame(dt.train$SalePrice)
+
+hist(sale_price$dt.train.SalePrice,xlim = c(1000,800000),main = "Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(sale_price$dt.train.SalePrice))
+
+```
+
+This histogram clearly shows that distribution of SalesPrice is Skewed to the right. To rectify this we need to apply log or power functions to SalesPrice variable. 
+
+```{r, include=T,echo=F}
+
+hist(log(sale_price$dt.train.SalePrice),main = "Log of Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(log(sale_price$dt.train.SalePrice)))
+
+```
+
+After applying the log function to the SalePrice, the distribution is closer to a normal distribution. Hence we can apply central limit theorm. 
+
+```{r, include=F}
+numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+
+#Correlation with Each variables and Sale Price:
+df.sale.corr <- data.frame(abs(df.corr[,38]))
+df.sale.corr$features <- names(df.corr)
+#View(df.sale.corr)
+
+df.sale.corr<- df.sale.corr[order(-df.sale.corr$abs.df.corr...38..),]
+#View(df.sale.corr) #Ordered list of Correlations
+
+#Top 5 correlated features
+top5Corr <- df.sale.corr[2:7,]
+
+```
+
+Top 5 Correlation Numerical Variables
+
+```{r , include=T,echo=F}
+
+colnames(top5Corr)<- c("Cors","Features")
+row.names(top5Corr) <- NULL
+
+kable(top5Corr[,c(2,1)])
+
+```
+
+Exploring top 5 correlated features using Scatterplots, BoxPlots etc
+
+```{r , include=T,echo=F}
+
+#Scatter Plots for Numerical 
+par(mfrow=c(2,1))
+
+options(scipen=5)
+
+plot(dt.train$GrLivArea, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
+  	xlab="Above grade (ground) living area square feet", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GrLivArea), col="black") # regression line 
+print("This plot clearly shows that the Living area above grade has a strong positive linear relationship with the Sale price.")
+
+plot(dt.train$GarageArea, dt.train$SalePrice, main="Scatterplot: GarageArea vs SalePrice", 
+  	xlab="Garage Area ", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GarageArea), col="black") # regression line
+print("This plot clearly shows that the Garage Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly")
+
+
+plot(dt.train$TotalBsmtSF, dt.train$SalePrice, main="Scatterplot: TotalBsmtSF vs SalePrice", 
+  	xlab="TotalBsmtSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(1, 3000))
+abline(lm(dt.train$SalePrice~dt.train$TotalBsmtSF), col="black") # regression line
+print("This plot clearly shows that the Total Basement Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly")
+
+
+plot(dt.train$X1stFlrSF, dt.train$SalePrice, main="Scatterplot: X1stFlrSF vs SalePrice", 
+  	xlab="X1stFlrSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(250, 2500))
+abline(lm(dt.train$SalePrice~dt.train$X1stFlrSF), col="black") # regression line
+print("This plot clearly shows that the First Floor area has a strong positive linear relationship with the Sale price.")
+
+par(mfrow=c(1,1))
+#Categorical Varaible
+
+p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice))
+p + geom_violin(scale = "width")
+p + geom_violin(fill = "yellow", colour = "red")
+print("This violin plot shows probability density of the data at different values. For a house with maximum(10) Over all Quality has very high spread and distribution is close to normal where as Over all Quality with 2 has no standard probability and has minimum spread. Rest of the values has close to normal distribution with mean value increasing as the Over all Quality increase ")
+
+boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
+  col=(c("gold","darkgreen")),
+  main="Overall House Condition and Price", xlab="Overal Condition")
+print("It is quiet evident that OverallCond with 5 units has many outliers and mean sales price of houses with more than 5 rating for Over all condition is similar ")
+
+boxplot(dt.train$SalePrice~dt.train$GarageCars, data=dt.train, notch=FALSE, 
+  col=(c("gold","red")),
+  main="Garage Cars and Price", xlab="Garage Cars")
+print("This plot shows that houses with 3 car Garage Space has suprisingly greater mean than the rest of the values ")
+
+dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
+boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
+  main="Bathrooms and Sales price", xlab="Total Bathrooms")
+print("Data given has Full and Half bathrooms. Here, we combined those columns to see data so that both full and half bathroom quantity is quantized in a single value. Box plot clearly shows that prices for each value of 1,1.5, 2 and 2.5 house prices are quite similar to each other as the width of box is short  ")
+
+```
+
+Viewing the Correlation Plot 
 
 ```{r Correlation Plot, include=T,echo=F}
 
 correlations <- cor(dt.train[, numeric_var], use = "everything")
 corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.col = "grey",tl.cex = 0.6)
+
+print("Above Correlation heat map helps to visualize correlation between different combinations of variables")
 
 ```
 
@@ -332,6 +344,9 @@ for(i in 1:nrow(df.corr)){
   }
 }
 df.mul.cor <- as.data.frame(df.mul.cor)
+
+print("Above function helps to understand the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors ")
+
 ```
 
 ```{r, include=T, echo=F}
@@ -390,7 +405,10 @@ lm.all <- standardize(
     , data = dt.train
   )
 )
+
+
 ```
+
 
 ```{r, include=F}
 
@@ -417,8 +435,13 @@ cat("RMSE of the baseline model with all predictors ", rmse(dt.train$SalePrice, 
 
 ```
 
-Removing the predictor with NAs as coeffiecient, because of multi colinearity
-Exterior2nd, BsmtCond,  BsmtFinType1, TotalBsmtSF, Electrical, GarageFinish, GarageCond, GrLivArea, GarageQual
+Base model served two purposes. 
+1. This helps to compare the performance of base model with the future models and see if the there is any improvement after selecting the best variables
+2. This also helped in checking collinearity between categorical variables. 
+
+
+Removing the predictor with NAs as coeffiecient because of multi colinearity.
+These are the predictors removed:Exterior2nd, BsmtCond,  BsmtFinType1, TotalBsmtSF, Electrical, GarageFinish, GarageCond, GrLivArea, GarageQual
 
 ```{r, include=T, echo=T}
 lm.sel <- standardize(
@@ -455,14 +478,14 @@ cat("RMSE of the model after removing multicollinear variables with all predicto
 
 ```
 
-Picking predictors basing on the Beta coeffiencients and P values.
+Picking Top 20 predictors basing on the Beta coeffiencients and P values.
 
 ```{r, include=F}
 
 lm.df <- as.data.frame(coef(summary(lm.sel)))
 
 names(lm.df)
-lm.df$estabs <- abs(lm.df$Estimate)
+lm.df$estimate_absolute_estimates <- abs(lm.df$Estimate)
 
 ```
 
@@ -473,7 +496,7 @@ kable(lm.df[order(-lm.df$estabs, -lm.df$`Pr(>|t|)`),][1:20,])
 
 ```
 
-New model with just the strong predictors picked from above, and strongly corelated variables. 
+New model after selecting the strong predictors picked from above, and strongly corelated variables. 
 
 ```{r, include=T,echo=F}
 
@@ -507,7 +530,7 @@ print(f)
 
 ```
 
-Using CFS test to pick important numercial variables.
+Using CFS(Correlation based Feature Selection) test to pick important numercial variables.
 
 ```{r, include=F}
 subset <- cfs(SalePrice~., dt.train)
@@ -537,7 +560,7 @@ cat("RMSE of the final model", rmse(dt.train$SalePrice, predict(lm.sel4)))
 
 ```
 
-After brainstorming about general features considered by people to make a decision about a house, conclusion have been made that above features are considered more often than other available variables
+Also,After brainstorming about general features considered by people to make a decision about a house, conclusion have been made that above features are considered more often than other available variables
 
 Exploring the residual plot of the final model
 
@@ -562,6 +585,8 @@ Residual plot of the final model after adding the quadratic variable and interac
 plot(lm.sel5,which = 1)
 
 ```
+Residual Plot show that the residuals and the predicted values do not follow any linear relationship. Data points are randomly distributed. This indicates that the linear model above is appropriate for the data. 
+
 
 ### NEXT STEPS
  After the initial attempts and computations, these following steps have been planned to improve the model
