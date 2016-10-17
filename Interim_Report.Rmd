@@ -77,8 +77,6 @@ rmse <- function(y, yhat) {
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
 setwd("E:/MS/PAR/GroupProject")
-setwd('/Users/mdobbali/Google Drive/University/Classes/Pred with R/Data/')
-
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv')
@@ -258,77 +256,95 @@ kable(top5Corr[,c(2,1)])
 
 Exploring top 5 correlated features using Scatterplots, BoxPlots etc
 
-```{r , include=T,echo=F}
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 
 #Scatter Plots for Numerical 
-par(mfrow=c(2,1))
+# par(mfrow=c(2,1))
 
 options(scipen=5)
 
 plot(dt.train$GrLivArea, dt.train$SalePrice, main="Scatterplot: GrLivArea vs SalePrice", 
   	xlab="Above grade (ground) living area square feet", ylab="Sales Price ", pch=20, col = "red")
 abline(lm(dt.train$SalePrice~dt.train$GrLivArea), col="black") # regression line 
-print("This plot clearly shows that the Living area above grade has a strong positive linear relationship with the Sale price.")
+```
+This plot clearly shows that the Living area above grade has a strong positive linear relationship with the Sale price.
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 
 plot(dt.train$GarageArea, dt.train$SalePrice, main="Scatterplot: GarageArea vs SalePrice", 
   	xlab="Garage Area ", ylab="Sales Price ", pch=20, col = "red")
 abline(lm(dt.train$SalePrice~dt.train$GarageArea), col="black") # regression line
-print("This plot clearly shows that the Garage Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly")
+```
 
+This plot clearly shows that the Garage Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 
 plot(dt.train$TotalBsmtSF, dt.train$SalePrice, main="Scatterplot: TotalBsmtSF vs SalePrice", 
   	xlab="TotalBsmtSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(1, 3000))
 abline(lm(dt.train$SalePrice~dt.train$TotalBsmtSF), col="black") # regression line
-print("This plot clearly shows that the Total Basement Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly")
+```
+This plot clearly shows that the Total Basement Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 
 
 plot(dt.train$X1stFlrSF, dt.train$SalePrice, main="Scatterplot: X1stFlrSF vs SalePrice", 
   	xlab="X1stFlrSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(250, 2500))
 abline(lm(dt.train$SalePrice~dt.train$X1stFlrSF), col="black") # regression line
-print("This plot clearly shows that the First Floor area has a strong positive linear relationship with the Sale price.")
+```
 
+This plot clearly shows that the First Floor area has a strong positive linear relationship with the Sale price.
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 par(mfrow=c(1,1))
 #Categorical Varaible
 
-p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice))
-p + geom_violin(scale = "width")
-p + geom_violin(fill = "yellow", colour = "red")
-print("This violin plot shows probability density of the data at different values. For a house with maximum(10) Over all Quality has very high spread and distribution is close to normal where as Over all Quality with 2 has no standard probability and has minimum spread. Rest of the values has close to normal distribution with mean value increasing as the Over all Quality increase ")
+p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice)) + geom_violin(scale = "width")
+```
 
-par(mfrow=c(2,1))
+This violin plot shows probability density of the data at different values. For a house with maximum(10) Over all Quality has very high spread and distribution is close to normal where as Over all Quality with 2 has no standard probability and has minimum spread. Rest of the values has close to normal distribution with mean value increasing as the Over all Quality increase
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+#par(mfrow=c(2,1))
 boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
   col=(c("gold","darkgreen")),
   main="Overall House Condition and Price", xlab="Overal Condition")
-print("It is quiet evident that OverallCond with 5 units has many outliers and mean sales price of houses with more than 5 rating for Over all condition is similar ")
+```
 
+It is quiet evident that OverallCond with 5 units has many outliers and mean sales price of houses with more than 5 rating for Over all condition is similar 
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 boxplot(dt.train$SalePrice~dt.train$GarageCars, data=dt.train, notch=FALSE, 
   col=(c("gold","red")),
   main="Garage Cars and Price", xlab="Garage Cars")
-print("This plot shows that houses with 3 car Garage Space has suprisingly greater mean than the rest of the values ")
+```
 
+This plot shows that houses with 3 car Garage Space has suprisingly greater mean than the rest of the values 
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
 boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
   main="Bathrooms and Sales price", xlab="Total Bathrooms")
-print("Data given has Full and Half bathrooms. Here, we combined those columns to see data so that both full and half bathroom quantity is quantized in a single value. Box plot clearly shows that prices for each value of 1,1.5, 2 and 2.5 house prices are quite similar to each other as the width of box is short  ")
+```
 
+Data given has Full and Half bathrooms. Here, we combined those columns to see data so that both full and half bathroom quantity is quantized in a single value. Box plot clearly shows that prices for each value of 1,1.5, 2 and 2.5 house prices are quite similar to each other as the width of box is short
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
 boxplot(dt.train$SalePrice~dt.train$Neighborhood, data =dt.train, notch = FALSE,col=(c("gold","red")),
-  main="Neighborhood and Sales price", xlab="Neighborhood", las=2)
-print(" ")
-
-
+  main="Neighborhood and Sales price", xlab="", las=2)
 ```
 
 Viewing the Correlation Plot 
 
-```{r Correlation Plot, include=T,echo=F}
+```{r Correlation Plot, include=T,echo=F, fig.height=5, fig.width=8}
 
 correlations <- cor(dt.train[, numeric_var], use = "everything")
 corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.col = "grey",tl.cex = 0.6)
 
-print("Above Correlation heat map helps to visualize correlation between different combinations of variables")
 
 ```
 
+Above Correlation heat map helps to visualize correlation between different combinations of variables
 Inspecting Multicolinearity between features in order to eliminate highly corelated features.
 
 ```{r inspecting multicolinearity, include=F}
@@ -442,8 +458,10 @@ cat("RMSE of the baseline model with all predictors ", rmse(dt.train$SalePrice, 
 ```
 
 Base model served two purposes. 
+
 1. This helps to compare the performance of base model with the future models and see if the there is any improvement after selecting the best variables
-2. This also helped in checking collinearity between categorical variables. 
+
+2. This also helped in checking collinearity between categorical variables
 
 
 Removing the predictor with NAs as coeffiecient because of multi colinearity.
@@ -558,7 +576,7 @@ For Feature selections we used chi.squared which will find weights of discrete a
 
 Final Model with just the Top 5 predictors.
 
-```{r, include=T,echo=T}
+```{r, include=F,echo=F}
 lm.sel4 <- standardize(lm(SalePrice ~ OverallQual  + TotalBsmtSF 
                           + GrLivArea + GarageCars + Neighborhood ,data=dt.train))
 summary(lm.sel4)
@@ -580,7 +598,9 @@ plot(lm.sel4,which = 1)
 ```
 
 Modifying the model futher by 
+
   1. Converting Quality variable into factor variable to take into account the bin like effect on the SalePrice
+  
   2. Adding a interaction between Neighborhood ad Quality
   
 ```{r, include=F,echo=F}
@@ -609,7 +629,7 @@ aggregate(SalePrice~Neighborhood, data = dt.train, median)
 ```
 
 
-```{r, include=T, echo=T}
+```{r, include=T, echo=F}
 cat("RMSE of the final model with quality as factor and interaction term", rmse(dt.train$SalePrice, predict(lm.sel5)))  
 ```
 
