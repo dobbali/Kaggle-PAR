@@ -4,3 +4,78 @@ author: "Sai Deepthi Matam, Sri Harsha Samanthula"
 output: pdf_document
 ---
 
+
+
+### OBJECTIVE
+
+  Initial focus of the project is to gain knowledge of the data and understand the relation between each of the variables to the house's sale price. Later, further statistical analysis will be conducted to select any 5 variables which tend to effect the price the most.
+  
+  Later, using the training data set, a best-fitting model will be constructed with the 5 variables as predictors of housing prices. Performance of various statistical models will be compared against each other to determine which model fits the best.
+
+### ABOUT THE DATA
+
+  The data set available on Kaggle contains 80 variables that involve in assessing home values. Out of these, 20 are continuous, 14 are discrete and the remaining 46 are categorical variables. This data has been randomized and then split in to two sets(train and test) of equal size. "SalePrice" is the outcome variable
+  
+```{r ,include=F}
+### REQUIRED PACKAGES
+# install.packages("e1071")
+# install.packages("Amelia")
+# install.packages("RANN")
+# install.packages("ipred")
+# install.packages("corrplot")
+# install.packages("RColorBrewer")
+# install.packages("lars")
+# install.packages("glmnet")
+# install.packages("ggplot2")
+# install.packages("devtools")
+# install_github("easyGgplot2", "kassambara")
+# install.packages("FSelector")
+# install.packages("mlbench")
+
+library(FSelector)
+library(mlbench)
+# library(easyGgplot2)
+# library(devtools)
+library(ggplot2)
+library(glmnet)
+library(lars)
+library(RColorBrewer)
+library(reshape2)
+library(ggplot2)
+library(e1071)
+library(dplyr)
+library(Amelia)
+library(RANN)
+library(arm)
+library(caret)
+library(ipred)
+library(corrplot)
+library(knitr)
+
+```
+
+
+```{r, include=F}
+### DEFINING USEFUL FUNCTIONS
+rmse <- function(y, yhat) {
+  sqrt(mean((y - yhat)^2))
+}
+
+```
+
+
+```{r Loading the data, include=F}
+
+# setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
+setwd("E:/MS/PAR/GroupProject/PAR-GP")
+
+dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
+dt.test <- read.csv('test.csv')
+dim(dt.train)
+str(dt.train)
+
+
+```
+
+
+
