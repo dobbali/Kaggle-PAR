@@ -61,6 +61,9 @@ rmse <- function(y, yhat) {
   sqrt(mean((y - yhat)^2))
 }
 
+rmlse <- function(a, p) { 
+  return(sqrt(1/length(a)*sum((log(p +1)-log(a +1))^2)))
+}
 ```
 
 
@@ -77,5 +80,176 @@ str(dt.train)
 
 ```
 
+Certain columns have missing values(NAs). Below is the summary of all missing value information.
+
+Train Set ::
+```{r Summarizing information on missing values in train set, include=T,echo=F}
+
+numCols.tr <- NULL
+charCols.tr <- NULL
+misc.tr <- NULL
+for (i in 1:ncol(dt.train)){
+  if(is.numeric(dt.train[,i])){
+    numCols.tr <- c(numCols.tr,names(dt.train)[i])
+  }
+  else if(is.character(dt.train[,i])){
+    charCols.tr <- c(charCols.tr,names(dt.train)[i])
+  }
+  else {
+    misc.tr <- c(misc.tr,names(dt.train)[i])
+  }
+}
+
+mis.vars <-data.frame(colSums(sapply(dt.train, is.na)))
+mis.vars$num_yn <- "Z"
+for(i in 1:nrow(mis.vars)){
+  if( rownames(mis.vars)[i] %in% numCols.tr){
+    mis.vars[i,2] <- "Y"
+  }else{
+    mis.vars[i,2] <- "N"
+  }
+}
+
+colnames(mis.vars) <- c('No_of_NAs')
+kable(subset(mis.vars, No_of_NAs > 0 ))
+
+```
+Test Set ::
+```{r Summarizing information on missing values in test set, include=T,echo=F}
+
+numCols.te <- NULL
+charCols.te <- NULL
+misc.te <- NULL
+for (i in 1:ncol(dt.test)){
+  if(is.numeric(dt.test[,i])){
+    numCols.te <- c(numCols.te,names(dt.test)[i])
+  }
+  else if(is.character(dt.test[,i])){
+    charCols.te <- c(charCols.te,names(dt.test)[i])
+  }
+  else {
+    misc.te <- c(misc.te,names(dt.test)[i])
+  }
+}
+
+mis.vars.te <-data.frame(colSums(sapply(dt.test, is.na)))
+mis.vars.te$num_yn <- "Z"
+for(i in 1:nrow(mis.vars.te)){
+  if( rownames(mis.vars.te)[i] %in% numCols.te){
+    mis.vars.te[i,2] <- "Y"
+  }else{
+    mis.vars.te[i,2] <- "N"
+  }
+}
+
+colnames(mis.vars.te) <- c('No_of_NAs')
+kable(subset(mis.vars.te, No_of_NAs > 0 ))
+
+```
+
+Here, out of 80 varaibles, there are only 3 variables that has missing values. Single imputations works well in this case. So, we used Bagimpute 
+
+NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
+
+```{r Performing Imputation on numeric variables2, include=F}
+
+bagImpute <- predict(preProcess(dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))], method = c("bagImpute")), dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))])
+bagImpute
+
+dt.train$GarageYrBlt <- round(bagImpute$GarageYrBlt)
+dt.train$MasVnrArea <- bagImpute$MasVnrArea
+dt.train$LotFrontage <- bagImpute$LotFrontage
+
+bagImpute <- predict(preProcess(dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,2] == "Y"))))], method = c("bagImpute")), dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,2] == "Y"))))])
+bagImpute
+
+dt.test$GarageYrBlt <- round(bagImpute$GarageYrBlt)
+dt.test$MasVnrArea <- bagImpute$MasVnrArea
+dt.test$LotFrontage <- bagImpute$LotFrontage
+dt.test$BsmtFinSF1 <- bagImpute$BsmtFinSF1
+dt.test$BsmtFinSF2 <- bagImpute$BsmtFinSF2
+dt.test$BsmtUnfSF <- bagImpute$BsmtUnfSF
+dt.test$TotalBsmtSF <- bagImpute$TotalBsmtSF
+dt.test$BsmtFullBath <- bagImpute$BsmtFullBath
+dt.test$GarageCars <- round(bagImpute$GarageCars)
+dt.test$GarageArea <- bagImpute$GarageArea
+
+```
 
 
+Here, out of 80 varaibles, there are only 3 variables that has missing values. Single imputations works well in this case. So, we used Bagimpute 
+
+NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
+
+```{r Handling NAs in character variables, include=F}
+
+dt.train$Alley <- ifelse(is.na(dt.train$Alley),"No Alley", dt.train$Alley)
+
+dt.train$MasVnrType <- ifelse(is.na(dt.train$MasVnrType),"None", dt.train$MasVnrType)
+# some data has masvnrtype none and area <> 0
+#subset(dt.train, dt.train$MasVnrType == "None")$MasVnrArea 
+
+dt.train$BsmtQual <- ifelse(is.na(dt.train$BsmtQual),"NoBsmt", dt.train$BsmtQual)
+
+dt.train$BsmtCond <- ifelse(is.na(dt.train$BsmtCond),"NoBsmt", dt.train$BsmtCond)
+
+dt.train$BsmtExposure <- ifelse(is.na(dt.train$BsmtExposure),"NoBsmt", dt.train$BsmtExposure)
+
+dt.train$BsmtFinType1 <- ifelse(is.na(dt.train$BsmtFinType1),"NoBsmt", dt.train$BsmtFinType1)
+
+dt.train$BsmtFinType2 <- ifelse(is.na(dt.train$BsmtFinType2),"NoBsmt", dt.train$BsmtFinType2)
+
+dt.train$FireplaceQu <- ifelse(is.na(dt.train$FireplaceQu),"NoFireplace", dt.train$FireplaceQu)
+
+dt.train$GarageType <- ifelse(is.na(dt.train$GarageType),"NoGarage", dt.train$GarageType)
+
+dt.train$GarageFinish <- ifelse(is.na(dt.train$GarageFinish),"NoGarage", dt.train$GarageFinish)
+
+dt.train$GarageQual <- ifelse(is.na(dt.train$GarageQual),"NoGarage", dt.train$GarageQual)
+
+dt.train$GarageCond <- ifelse(is.na(dt.train$GarageCond),"NoGarage", dt.train$GarageCond)
+
+dt.train$GarageCond <- ifelse(is.na(dt.train$GarageCond),"NoGarage", dt.train$GarageCond)
+
+dt.train$PoolQC <- ifelse(is.na(dt.train$PoolQC),"NoPool", dt.train$PoolQC)
+
+dt.train$Fence <- ifelse(is.na(dt.train$Fence),"NoFence", dt.train$Fence)
+
+dt.train$MiscFeature <- ifelse(is.na(dt.train$MiscFeature),"NoFence", dt.train$MiscFeature)
+
+
+dt.test$Alley <- ifelse(is.na(dt.test$Alley),"No Alley", dt.test$Alley)
+
+dt.test$MasVnrType <- ifelse(is.na(dt.test$MasVnrType),"None", dt.test$MasVnrType)
+# some data has masvnrtype none and area <> 0
+#subset(dt.test, dt.test$MasVnrType == "None")$MasVnrArea 
+
+dt.test$BsmtQual <- ifelse(is.na(dt.test$BsmtQual),"NoBsmt", dt.test$BsmtQual)
+
+dt.test$BsmtCond <- ifelse(is.na(dt.test$BsmtCond),"NoBsmt", dt.test$BsmtCond)
+
+dt.test$BsmtExposure <- ifelse(is.na(dt.test$BsmtExposure),"NoBsmt", dt.test$BsmtExposure)
+
+dt.test$BsmtFinType1 <- ifelse(is.na(dt.test$BsmtFinType1),"NoBsmt", dt.test$BsmtFinType1)
+
+dt.test$BsmtFinType2 <- ifelse(is.na(dt.test$BsmtFinType2),"NoBsmt", dt.test$BsmtFinType2)
+
+dt.test$FireplaceQu <- ifelse(is.na(dt.test$FireplaceQu),"NoFireplace", dt.test$FireplaceQu)
+
+dt.test$GarageType <- ifelse(is.na(dt.test$GarageType),"NoGarage", dt.test$GarageType)
+
+dt.test$GarageFinish <- ifelse(is.na(dt.test$GarageFinish),"NoGarage", dt.test$GarageFinish)
+
+dt.test$GarageQual <- ifelse(is.na(dt.test$GarageQual),"NoGarage", dt.test$GarageQual)
+
+dt.test$GarageCond <- ifelse(is.na(dt.test$GarageCond),"NoGarage", dt.test$GarageCond)
+
+dt.test$GarageCond <- ifelse(is.na(dt.test$GarageCond),"NoGarage", dt.test$GarageCond)
+
+dt.test$PoolQC <- ifelse(is.na(dt.test$PoolQC),"NoPool", dt.test$PoolQC)
+
+dt.test$Fence <- ifelse(is.na(dt.test$Fence),"NoFence", dt.test$Fence)
+
+dt.test$MiscFeature <- ifelse(is.na(dt.test$MiscFeature),"NoFence", dt.test$MiscFeature)
+
+```
