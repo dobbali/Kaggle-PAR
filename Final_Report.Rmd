@@ -61,9 +61,22 @@ rmse <- function(y, yhat) {
   sqrt(mean((y - yhat)^2))
 }
 
-rmlse <- function(a, p) { 
-  return(sqrt(1/length(a)*sum((log(p +1)-log(a +1))^2)))
+rmsle <- function(a, p) { 
+   return(sqrt(1/length(a)*sum((log(p +1)-log(a +1))^2)))
 }
+
+stats <- function(x){
+    c( 
+       N = sum(x, na.rm = T) ,
+       MEAN = mean(x) , 
+       SD = sd(x, na.rm = FALSE) , 
+       SEM = sd(x)/sqrt(length(x)) ,
+       LOWER_CI = mean(x) - (1.96 * (sd(x)/sqrt(length(x)))) ,
+       UPPER_CI = mean(x) + (1.96 * (sd(x)/sqrt(length(x)))) ,
+       L = length(x)
+     )
+}
+
 ```
 
 
@@ -253,3 +266,111 @@ dt.test$Fence <- ifelse(is.na(dt.test$Fence),"NoFence", dt.test$Fence)
 dt.test$MiscFeature <- ifelse(is.na(dt.test$MiscFeature),"NoFence", dt.test$MiscFeature)
 
 ```
+
+
+```{r Feature Engineering, include=F}
+
+numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+
+#Correlation with Each variables and Sale Price:
+df.sale.corr <- data.frame(abs(df.corr[,38]))
+df.sale.corr$features <- names(df.corr)
+#View(df.sale.corr)
+
+df.sale.corr<- df.sale.corr[order(-df.sale.corr$abs.df.corr...38..),]
+#View(df.sale.corr) #Ordered list of Correlations
+
+#Top 5 correlated features
+top5Corr <- df.sale.corr[2:7,]
+
+```
+
+Top 5 Correlation Numerical Variables
+
+```{r , include=T,echo=F}
+
+colnames(top5Corr)<- c("Cors","Features")
+row.names(top5Corr) <- NULL
+
+kable(top5Corr[,c(2,1)])
+
+```
+
+
+```{r , include=T,echo=F}
+correlations <- cor(dt.train[, numeric_var], use = "everything")
+corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.col = "grey",tl.cex = 0.6)
+```
+
+```{r inspecting multicolinearity, include=F}
+
+df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
+
+df.mul.cor <- NULL 
+for(i in 1:nrow(df.corr)){
+  for(j in 1:i){
+    df.temp <- NULL
+    if(!is.na(df.corr[i,j])){
+      if(df.corr[i,j] >= 0.6 && df.corr[i,j] != 1){
+        df.temp$name1 <- names(df.corr)[i]
+        df.temp$name2 <- names(df.corr)[j]
+        df.temp$cor <- df.corr[i,j]
+        df.mul.cor <- rbind(df.mul.cor,df.temp)
+      }
+    }
+  }
+}
+df.mul.cor <- as.data.frame(df.mul.cor)
+
+```
+Following table contains the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors 
+
+```{r, include=T, echo=F}
+
+df.mul.cor <- subset(df.mul.cor, name1 != "SalePrice")
+kable(df.mul.cor, row.names=FALSE)
+
+```
+
+Combining Bath into one variable 
+BsmtFullbath, BsmtHalfBath, FullBath, HalfBath
+
+```{r, include=T, echo=F}
+dt.train$bathrooms <- dt.train$BsmtFullBath+ (0.5  * dt.train$BsmtHalfBath) +dt.train$FullBath+ (0.5*dt.train$HalfBath)
+```
+
+```{r}
+
+frmla <- "SalePrice ~ "
+for(name in numCols.tr){
+  if(name != "Id" &&  name != "SalePrice"){
+    frmla <- paste(frmla  ,"+" , name)
+  }
+}
+
+lasso_mod <- train(SalePrice ~   MSSubClass + LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + X1stFlrSF + X2ndFlrSF + LowQualFinSF + GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + X3SsnPorch + ScreenPorch + PoolArea + MiscVal + MoSold + YrSold, data = dt.train,
+                   preProcess = c("center", "scale"),
+                   method = "glmnet",
+                   tuneGrid= expand.grid(
+                     alpha=1,
+                     lambda = 0:20/20))
+
+plot(lasso_mod)
+plot(lasso_mod$finalModel)
+lasso_mod$finalModel$tuneValue
+num_coef <- data.frame(as.matrix(coef(lasso_mod$finalModel, lasso_mod$finalModel$tuneValue$lambda)))
+num_coef$variables <- rownames(num_coef)
+num_coef$coeffiecient <- num_coef$X1
+rownames(num_coef) <- NULL
+num_coef$X1 <- NULL
+num_coef[order(-abs(num_coef$coeffiecient)),]
+
+rmse(dt.train$SalePrice,predict(lasso_mod, newdata = dt.train))
+
+RMSLE <- function(A, P) {
+    return (sqrt(sum((log(P+1)-log(A+1))^2)/length(A)))
+}
+RMSLE(dt.train$SalePrice,predict(lasso_mod, newdata = dt.train))
+```
+
