@@ -83,7 +83,8 @@ stats <- function(x){
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
-setwd("E:/MS/PAR/GroupProject/PAR-GP")
+#setwd("E:/MS/PAR/GroupProject/PAR-GP")
+setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv')
@@ -190,10 +191,6 @@ dt.test$GarageArea <- bagImpute$GarageArea
 ```
 
 
-Here, out of 80 varaibles, there are only 3 variables that has missing values. Single imputations works well in this case. So, we used Bagimpute 
-
-NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
-
 ```{r Handling NAs in character variables, include=F}
 
 dt.train$Alley <- ifelse(is.na(dt.train$Alley),"No Alley", dt.train$Alley)
@@ -253,7 +250,7 @@ dt.test$GarageType <- ifelse(is.na(dt.test$GarageType),"NoGarage", dt.test$Garag
 
 dt.test$GarageFinish <- ifelse(is.na(dt.test$GarageFinish),"NoGarage", dt.test$GarageFinish)
 
-dt.test$GarageQual <- ifelse(is.na(dt.test$GarageQual),"NoGarage", dt.test$GarageQual)
+dt.test$GarageQual <- ifelse(is.na(dt.test$GarageQual),"NoGarage", dt.test$YesGarageQual)
 
 dt.test$GarageCond <- ifelse(is.na(dt.test$GarageCond),"NoGarage", dt.test$GarageCond)
 
@@ -338,6 +335,13 @@ BsmtFullbath, BsmtHalfBath, FullBath, HalfBath
 
 ```{r, include=T, echo=F}
 dt.train$bathrooms <- dt.train$BsmtFullBath+ (0.5  * dt.train$BsmtHalfBath) +dt.train$FullBath+ (0.5*dt.train$HalfBath)
+
+dt.train$porch <- dt.train$WoodDeckSF + dt.train$OpenPorchSF + dt.train$EnclosedPorch + dt.train$X3SsnPorch + dt.train$ScreenPorch
+
+dt.train$totalRoom <- dt.train$TotRmsAbvGrd + dt.train$KitchenAbvGr
+
+
+
 ```
 
 ```{r}
@@ -349,8 +353,8 @@ for(name in numCols.tr){
   }
 }
 
-lasso_mod <- train(SalePrice ~   MSSubClass + LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + X1stFlrSF + X2ndFlrSF + LowQualFinSF + GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + X3SsnPorch + ScreenPorch + PoolArea + MiscVal + MoSold + YrSold, data = dt.train,
-                   preProcess = c("center", "scale"),
+lasso_mod <- train(SalePrice ~LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold, data = dt.train,
+                   #preProcess = c("center", "scale"),
                    method = "glmnet",
                    tuneGrid= expand.grid(
                      alpha=1,
