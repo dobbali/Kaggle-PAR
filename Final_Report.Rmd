@@ -51,6 +51,7 @@ library(caret)
 library(ipred)
 library(corrplot)
 library(knitr)
+library(caretEnsemble)
 
 ```
 
@@ -341,27 +342,29 @@ dt.train$porch <- dt.train$WoodDeckSF + dt.train$OpenPorchSF + dt.train$Enclosed
 dt.train$totalRoom <- dt.train$TotRmsAbvGrd + dt.train$KitchenAbvGr
 
 
+dt.test$bathrooms <- dt.test$BsmtFullBath+ (0.5  * dt.test$BsmtHalfBath) +dt.test$FullBath+ (0.5*dt.test$HalfBath)
+
+dt.test$porch <- dt.test$WoodDeckSF + dt.test$OpenPorchSF + dt.test$EnclosedPorch + dt.test$X3SsnPorch + dt.test$ScreenPorch
+
+dt.test$totalRoom <- dt.test$TotRmsAbvGrd + dt.test$KitchenAbvGr
 
 ```
 
 ```{r}
 
-frmla <- "SalePrice ~ "
-for(name in numCols.tr){
-  if(name != "Id" &&  name != "SalePrice"){
-    frmla <- paste(frmla  ,"+" , name)
-  }
-}
+frmla <- formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold")
 
-lasso_mod <- train(SalePrice ~LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold, data = dt.train,
-                   #preProcess = c("center", "scale"),
+lasso_mod <- train(frmla, data = dt.train,
+                   preProcess = c("center", "scale"),
                    method = "glmnet",
                    tuneGrid= expand.grid(
                      alpha=1,
                      lambda = 0:20/20))
 
-plot(lasso_mod)
+#plot(lasso_mod)
 plot(lasso_mod$finalModel)
+legend(num_coef$variables)
+
 lasso_mod$finalModel$tuneValue
 num_coef <- data.frame(as.matrix(coef(lasso_mod$finalModel, lasso_mod$finalModel$tuneValue$lambda)))
 num_coef$variables <- rownames(num_coef)
@@ -376,5 +379,91 @@ RMSLE <- function(A, P) {
     return (sqrt(sum((log(P+1)-log(A+1))^2)/length(A)))
 }
 RMSLE(dt.train$SalePrice,predict(lasso_mod, newdata = dt.train))
+
+ridge_mod <- train(frmla, 
+                data = dt.train,
+                preProcess = c("center", "scale"),
+                method = "glmnet",
+                tuneGrid= expand.grid(
+                  alpha=0,
+                  lambda = 0:10))
+#plot(ridge_mod)
+
+lm_mod <- train(frmla, 
+                data = dt.train,
+               preProcess = c("center", "scale"),
+                method = "lm")
+
+compare_temp  <- data.frame(variables = as.character(names(coef(lm_mod$finalModel))))
+
+compare_temp$method <- rep("lasso")
+compare_temp$coefs <- c(as.numeric(as.character(coef(lasso_mod$finalModel, 
+                                                     lasso_mod$finalModel$tuneValue$lambda))))
+
+compare <- data.frame(variables = rep(as.character(names(coef(lm_mod$finalModel))),2))
+compare$method <- c(rep("ridge"), rep("lm"))
+compare$coefs <- c(as.numeric(as.character(coef(ridge_mod$finalModel, ridge_mod$bestTune$lambda))),
+                   as.numeric(as.character(coef(lm_mod$finalModel))))
+
+compare <- rbind(compare, compare_temp)
+
+ggplot(compare, aes(variables, coefs, group=method, fill=method)) + 
+  geom_bar(stat = "identity",position="dodge") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
 ```
 
+Creating model ensemble 
+
+```{r}
+charCols.tr 
+
+tempF <- NULL
+for(name in charCols.tr){
+  tempF <- paste(tempF, "+", name)
+}
+tempF
+
+frmla = formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold+ MSZoning + LotShape + LandContour + Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + Condition2 + BldgType + HouseStyle + RoofStyle + RoofMatl + Exterior1st + Exterior2nd + MasVnrType + ExterQual + Foundation + BsmtQual + BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + Heating + HeatingQC + Electrical + KitchenQual + Functional + FireplaceQu + GarageType + GarageFinish + GarageQual + GarageCond + PavedDrive + PoolQC + Fence + MiscFeature ")
+
+svmLinear_mod <- train(frmla, 
+                    data = dt.train, 
+                    method= "svmLinear",
+                    preProcess= c("center","scale"))
+
+
+rf_mod <- train( frmla, 
+                    data = dt.train, 
+                    method= "ranger",
+                    preProcess= c("center","scale"))
+
+gbm_mod <- train(frmla, 
+                    data = dt.train, 
+                    method= "gbm",
+                    preProcess= c("center","scale"))
+
+tree_mod <- train(frmla, 
+                    data = dt.train, 
+                    method= "rpart",
+                    preProcess= c("center","scale"))
+
+knn_mod <- train( frmla, 
+                    data = dt.train, 
+                    method= "knn",
+                    preProcess= c("center","scale"))
+rs <- resamples(list(lm=lm_mod, glmnet=glmnet_mod, 
+                     gbm=gbm_mod, rf=rf_mod, tree=tree_mod, 
+                     knn= knn_mod))
+summary(rs)
+
+model_list <- caretList(frmla, 
+                        data=dt.train,
+                        trControl=trainControl(savePredictions="final"),
+                        preProcess=c("center","scale"),
+                        methodList=c("rpart", "glmnet","gbm", "knn", "ranger"))
+
+summary(resamples(model_list))
+modelCor(resamples(model_list))
+
+```
