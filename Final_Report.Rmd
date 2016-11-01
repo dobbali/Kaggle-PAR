@@ -88,7 +88,7 @@ stats <- function(x){
 setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
-dt.test <- read.csv('test.csv')
+dt.test <- read.csv('test.csv', stringsAsFactors = FALSE)
 dim(dt.train)
 str(dt.train)
 
@@ -199,6 +199,7 @@ dt.train$Alley <- ifelse(is.na(dt.train$Alley),"No Alley", dt.train$Alley)
 dt.train$MasVnrType <- ifelse(is.na(dt.train$MasVnrType),"None", dt.train$MasVnrType)
 # some data has masvnrtype none and area <> 0
 #subset(dt.train, dt.train$MasVnrType == "None")$MasVnrArea 
+dt.train$Electrical<- ifelse(is.na(dt.train$Electrical),"SBrKr",dt.train$Electrical)
 
 dt.train$BsmtQual <- ifelse(is.na(dt.train$BsmtQual),"NoBsmt", dt.train$BsmtQual)
 
@@ -251,7 +252,7 @@ dt.test$GarageType <- ifelse(is.na(dt.test$GarageType),"NoGarage", dt.test$Garag
 
 dt.test$GarageFinish <- ifelse(is.na(dt.test$GarageFinish),"NoGarage", dt.test$GarageFinish)
 
-dt.test$GarageQual <- ifelse(is.na(dt.test$GarageQual),"NoGarage", dt.test$YesGarageQual)
+dt.test$GarageQual <- ifelse(is.na(dt.test$GarageQual),"NoGarage", dt.test$GarageQual)
 
 dt.test$GarageCond <- ifelse(is.na(dt.test$GarageCond),"NoGarage", dt.test$GarageCond)
 
@@ -262,6 +263,35 @@ dt.test$PoolQC <- ifelse(is.na(dt.test$PoolQC),"NoPool", dt.test$PoolQC)
 dt.test$Fence <- ifelse(is.na(dt.test$Fence),"NoFence", dt.test$Fence)
 
 dt.test$MiscFeature <- ifelse(is.na(dt.test$MiscFeature),"NoFence", dt.test$MiscFeature)
+
+dt.test$MSZoning <- ifelse(is.na(dt.test$MSZoning),"RM",dt.test$MSZoning)
+
+dt.test$Utilities <- ifelse(is.na(dt.test$Utilities),"AllPub",dt.test$Utilities)
+
+dt.test$Exterior1st <- ifelse(is.na(dt.test$Exterior1st),"WdShing",dt.test$Exterior1st)
+
+dt.test$Exterior2nd <- ifelse(is.na(dt.test$Exterior2nd),"Stone", dt.test$Exterior2nd)
+
+dt.test$BsmtHalfBath <- ifelse(is.na(dt.test$BsmtHalfBath),0,dt.test$BsmtHalfBath)
+
+dt.test$KitchenQual <- ifelse(is.na(dt.test$KitchenQual),"TA",dt.test$KitchenQual)
+
+dt.test$Functional <- ifelse(is.na(dt.test$Functional),"Typ",dt.test$Functional)
+
+dt.test$SaleType <- ifelse(is.na(dt.test$SaleType),"WD",dt.test$SaleType)
+
+char_var <- names(dt.train)[which(sapply(dt.train, is.character))]
+for(name in char_var){
+  #print(name)
+  dt.train[[name]] <- factor(dt.train[[name]])
+}
+
+char_var <- names(dt.test)[which(sapply(dt.test, is.character))]
+for(name in char_var){
+  #print(name)
+  dt.test[[name]] <- factor(dt.test[[name]])
+}
+
 
 ```
 
@@ -425,45 +455,36 @@ for(name in charCols.tr){
 }
 tempF
 
-frmla = formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold+ MSZoning + LotShape + LandContour + Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + Condition2 + BldgType + HouseStyle + RoofStyle + RoofMatl + Exterior1st + Exterior2nd + MasVnrType + ExterQual + Foundation + BsmtQual + BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + Heating + HeatingQC + Electrical + KitchenQual + Functional + FireplaceQu + GarageType + GarageFinish + GarageQual + GarageCond + PavedDrive + PoolQC + Fence + MiscFeature ")
+table(is.na(dt.train$SalePrice))
 
-svmLinear_mod <- train(frmla, 
-                    data = dt.train, 
-                    method= "svmLinear",
-                    preProcess= c("center","scale"))
+frmla = formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold+ MSZoning + LotShape + LandContour + Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + Condition2 + BldgType + HouseStyle + RoofStyle + RoofMatl + Exterior1st + Exterior2nd + MasVnrType + ExterQual + Foundation + BsmtQual + BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + Heating + HeatingQC  + KitchenQual + Functional + FireplaceQu + GarageType + GarageFinish + GarageQual + GarageCond + PavedDrive + PoolQC + Fence + MiscFeature ")
 
 
-rf_mod <- train( frmla, 
-                    data = dt.train, 
-                    method= "ranger",
-                    preProcess= c("center","scale"))
-
-gbm_mod <- train(frmla, 
-                    data = dt.train, 
-                    method= "gbm",
-                    preProcess= c("center","scale"))
-
-tree_mod <- train(frmla, 
-                    data = dt.train, 
-                    method= "rpart",
-                    preProcess= c("center","scale"))
-
-knn_mod <- train( frmla, 
-                    data = dt.train, 
-                    method= "knn",
-                    preProcess= c("center","scale"))
-rs <- resamples(list(lm=lm_mod, glmnet=glmnet_mod, 
-                     gbm=gbm_mod, rf=rf_mod, tree=tree_mod, 
-                     knn= knn_mod))
-summary(rs)
 
 model_list <- caretList(frmla, 
                         data=dt.train,
-                        trControl=trainControl(savePredictions="final"),
+                        trControl= trainControl(savePredictions = "final"),
                         preProcess=c("center","scale"),
-                        methodList=c("rpart", "glmnet","gbm", "knn", "ranger"))
+                        methodList=c("rpart", "glmnet","gbm", "knn", "ranger")
+                        )
 
 summary(resamples(model_list))
 modelCor(resamples(model_list))
 
+ce <- caretEnsemble(model_list)
+summary(ce)
+
+rmse(dt.train$SalePrice,predict(ce, newdata = dt.train))
+result <- predict(ce, newdata = dt.test)
+
+dt.result <- NULL
+dt.result$Id <- dt.test$Id
+dt.result$SalePrice <- result
+
+str(dt.test)
+str(result)
+
+dt.result <- as.data.frame(dt.result, row.names = NULL)
+
+write.csv(dt.result, 'Result.csv')
 ```
