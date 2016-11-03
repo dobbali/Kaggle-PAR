@@ -881,7 +881,7 @@ xgBoostm <- train(frmla, preProcess=c("center","scale"),
 features <- xgb.importance(xgBoostm$coefnames,model=xgBoostm$finalModel)
 features <- features[order(-features$Gain),]
 features$GainSc <- features$Gain*10000
-subset(features, GainSc>=1)
+
 ```
 
 
@@ -895,7 +895,27 @@ cat("Rsquared value of the XG Boosted Model : ",xgBoostm$results$Rsquared )
 
 ```
 
-XGBoosted model performs a lot better. Especially with the train set, but still it overfits a bit.
+XGBoosted model performs a lot better. Especially with the train set, but still it overfits a bit. Looking at the feature importance from the XG boosted model
+
+```{r XGBoosted, include=T, echo=F}
+kable(subset(features, GainSc>=5))
+
+plot( dt.train$GarageYrBlt, dt.train$SalePrice)
+
+```
+
+Finally, after eliminating some more variables. These are the final predictors 
+OverallQual, GrLivArea, TotalBsmtSF, bathrooms, YearBuilt, GarageCars, YearRemodAdd,
+ LotArea, OverallCond, GarageArea, FireplaceQu, KitchenAbvGr,porch, GarageType,
+GarageYrBlt ,BldgType, Neighborhood, CentralAir, MSZoning,Functional, PavedDrive, TotRmsAbvGrd
+
+```{r}
+frmlaa <- formula("SalePrice ~ OverallQual, GrLivArea, TotalBsmtSF, bathrooms, YearBuilt, GarageCars, YearRemodAdd,
+ LotArea, OverallCond, GarageArea, FireplaceQu, KitchenAbvGr,porch, GarageType,
+GarageYrBlt ,BldgType, Neighborhood, CentralAir, MSZoning,Functional, PavedDrive, TotRmsAbvGrd")
+
+```
+
 
 ### Gradient Boosting Model
 
