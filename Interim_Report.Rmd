@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### INTRODUCTION
 
-  The primary requirement is a real-time effective model to predict final selling price of houses in the city of Ames, Iowa.
+  The primary requirement is a effective model to predict final selling price of houses in the city of Ames, Iowa for a given set of house features.
 
 ### OBJECTIVE
 

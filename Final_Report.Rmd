@@ -4,17 +4,20 @@ author: "Sai Deepthi Matam, Sri Harsha Samanthula"
 output: pdf_document
 ---
 
-
+## INTRODUCTION
+The primary requirement is a effective model to predict final selling price of houses in the city of Ames, Iowa for a given set of house features.
 
 ### OBJECTIVE
 
-  Initial focus of the project is to gain knowledge of the data and understand the relation between each of the variables to the house's sale price. Later, further statistical analysis will be conducted to select any 5 variables which tend to effect the price the most.
+  Initial focus of the project is to gain knowledge of the data and understand the relation between each of the variables to the house's sale price. Later, further statistical analysis will be conducted to see how strongly these features effect the house prices the most.
   
-  Later, using the training data set, a best-fitting model will be constructed with the 5 variables as predictors of housing prices. Performance of various statistical models will be compared against each other to determine which model fits the best.
+  Later, using the training data set, a best-fitting model will be constructed with the some strong variables as predictors of housing prices. Performance of various statistical models will be compared against each other to determine which model fits the best. The results from this projet will finally help in estimating the house prices in Ames, Iowa for given feature set. 
+
 
 ### ABOUT THE DATA
 
   The data set available on Kaggle contains 80 variables that involve in assessing home values. Out of these, 20 are continuous, 14 are discrete and the remaining 46 are categorical variables. This data has been randomized and then split in to two sets(train and test) of equal size. "SalePrice" is the outcome variable
+
   
 ```{r ,include=F}
 ### REQUIRED PACKAGES
@@ -31,11 +34,11 @@ output: pdf_document
 # install_github("easyGgplot2", "kassambara")
 # install.packages("FSelector")
 # install.packages("mlbench")
+# library(easyGgplot2)
+# library(devtools)
 
 library(FSelector)
 library(mlbench)
-# library(easyGgplot2)
-# library(devtools)
 library(ggplot2)
 library(glmnet)
 library(lars)
@@ -84,8 +87,8 @@ stats <- function(x){
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
-#setwd("E:/MS/PAR/GroupProject/PAR-GP")
-setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
+setwd("E:/MS/PAR/GroupProject/PAR-GP")
+#setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv', stringsAsFactors = FALSE)
@@ -95,9 +98,10 @@ str(dt.train)
 
 ```
 
-Certain columns have missing values(NAs). Below is the summary of all missing value information.
+Exploring the data further we found certain columns have missing values(NAs). Below is the summary of all missing value information.
 
 Train Set ::
+
 ```{r Summarizing information on missing values in train set, include=T,echo=F}
 
 numCols.tr <- NULL
@@ -116,20 +120,24 @@ for (i in 1:ncol(dt.train)){
 }
 
 mis.vars <-data.frame(colSums(sapply(dt.train, is.na)))
+mis.vars$Fract <- round(mis.vars[,1]/nrow(dt.train) * 100 ,2)
 mis.vars$num_yn <- "Z"
 for(i in 1:nrow(mis.vars)){
   if( rownames(mis.vars)[i] %in% numCols.tr){
-    mis.vars[i,2] <- "Y"
+    mis.vars[i,3] <- "Y"
   }else{
-    mis.vars[i,2] <- "N"
+    mis.vars[i,3] <- "N"
   }
 }
 
-colnames(mis.vars) <- c('No_of_NAs', 'Numerical(y/n)')
+colnames(mis.vars) <- c('No_of_NAs','% of Missing variables', 'Numerical(y/n)')
+mis.vars <- mis.vars[order(mis.vars$`Numerical(y/n)`,mis.vars$`% of Missing variables`),]
 kable(subset(mis.vars, No_of_NAs > 0 ))
 
 ```
+
 Test Set ::
+
 ```{r Summarizing information on missing values in test set, include=T,echo=F}
 
 numCols.te <- NULL
@@ -148,35 +156,43 @@ for (i in 1:ncol(dt.test)){
 }
 
 mis.vars.te <-data.frame(colSums(sapply(dt.test, is.na)))
+mis.vars.te$Fract <- round(mis.vars.te[,1]/nrow(dt.train) * 100 ,2)
 mis.vars.te$num_yn <- "Z"
 for(i in 1:nrow(mis.vars.te)){
   if( rownames(mis.vars.te)[i] %in% numCols.te){
-    mis.vars.te[i,2] <- "Y"
+    mis.vars.te[i,3] <- "Y"
   }else{
-    mis.vars.te[i,2] <- "N"
+    mis.vars.te[i,3] <- "N"
   }
 }
 
-colnames(mis.vars.te) <- c('No_of_NAs', 'Numerical(y/n)')
+colnames(mis.vars.te) <- c('No_of_NAs','% of Missing variables', 'Numerical(y/n)')
+mis.vars.te <- mis.vars.te[order(mis.vars.te$`Numerical(y/n)`,mis.vars.te$`% of Missing variables`),]
+
 kable(subset(mis.vars.te, No_of_NAs > 0 ))
 
 ```
 
-Here, out of 80 varaibles, there are only 3 variables that has missing values. Single imputations works well in this case. So, we used Bagimpute 
 
-NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with more descriptive words.
+## DATA CLEANING
+
+### Numerical Variables
+ 
+NAs in numeric variables: Since these variables have an impact on the outcome variables, they can not be ignored. Also, the number of missing values for each variable is significantly higher which might introduce a substantial amount of bias or create reductions in efficiency. To avoid this, Imputation has been performed and Include methods on these variables. Imputation is a process of replacing missing data with an estimated value based on other available information.
+
+Here, In train set out of 79 varaibles, there are only 3  variables that has missing values, while in test set there are about 11 variables have missing values.
+Single imputations works well in this case. So, we used Bagimpute 
+
 
 ```{r Performing Imputation on numeric variables2, include=F}
 
 bagImpute <- predict(preProcess(dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))], method = c("bagImpute")), dt.train[,which(names(dt.train) %in% c('GarageYrBlt', 'MasVnrArea', 'LotFrontage'))])
-bagImpute
 
 dt.train$GarageYrBlt <- round(bagImpute$GarageYrBlt)
 dt.train$MasVnrArea <- bagImpute$MasVnrArea
 dt.train$LotFrontage <- bagImpute$LotFrontage
 
-bagImpute <- predict(preProcess(dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,2] == "Y"))))], method = c("bagImpute")), dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,2] == "Y"))))])
-bagImpute
+bagImpute <- predict(preProcess(dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,3] == "Y"))))], method = c("bagImpute")), dt.test[,which(names(dt.test) %in% rownames(subset(mis.vars.te, (mis.vars.te$No_of_NAs>0 & mis.vars.te[,3] == "Y"))))])
 
 dt.test$GarageYrBlt <- round(bagImpute$GarageYrBlt)
 dt.test$MasVnrArea <- bagImpute$MasVnrArea
@@ -190,6 +206,9 @@ dt.test$GarageCars <- round(bagImpute$GarageCars)
 dt.test$GarageArea <- bagImpute$GarageArea
 
 ```
+
+### Charactor/ Categorical Variables
+NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with proper descriptive words. All the charactor variables are converted to the factor variables
 
 
 ```{r Handling NAs in character variables, include=F}
@@ -295,11 +314,50 @@ for(name in char_var){
 
 ```
 
-Numerical Variables, 
-Checking for collinearity.
+```{r, include=F}
 
-```{r Checking , include=F}
+mean_sp <- mean(dt.train$SalePrice)
+median_sp <- median(dt.train$SalePrice)
+sd_sp <- sd(dt.train$SalePrice)
 
+sale_price_stats <- data.frame(mean_sp, median_sp, sd_sp)
+```
+
+
+## DATA VISUALIZATION
+
+To understand the spread of the Sale Price of houses in Ames.  
+
+```{r, include=T,echo=F}
+
+cat("Mean : " , sale_price_stats[,1])
+cat("Median : " , sale_price_stats[,2])
+cat("Standard Deviation : " , sale_price_stats[,3])
+```
+
+Here the Mean > Median which indicates a right skew in the data. The same is also plotted below:
+
+```{r, include=T, echo=F}
+
+sale_price <- data.frame(dt.train$SalePrice)
+
+hist(sale_price$dt.train.SalePrice,xlim = c(1000,800000),main = "Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(sale_price$dt.train.SalePrice))
+
+```
+
+This histogram clearly shows that distribution of SalesPrice is Skewed to the right. To rectify this we need to apply log or power functions to SalesPrice variable. 
+
+```{r, include=T,echo=F}
+
+hist(log(sale_price$dt.train.SalePrice)+1,main = "Log of Sale Price Distribution",xlab = 'Sale Price',freq = FALSE,col=brewer.pal(8,"Set3"),las = 3,breaks = 190)
+lines(density(log(sale_price$dt.train.SalePrice)+1))
+
+```
+
+After applying the log function to the SalePrice, the distribution is closer to a normal distribution. Hence we can apply central limit theorm. 
+
+```{r, include=F}
 numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
 df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
 
@@ -327,11 +385,98 @@ kable(top5Corr[,c(2,1)])
 
 ```
 
+Exploring top 5 correlated features using Scatterplots, BoxPlots etc
 
-```{r , include=T,echo=F}
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+
+#Scatter Plots for Numerical 
+# par(mfrow=c(2,1))
+
+options(scipen=5)
+
+plot(dt.train$GrLivArea, dt.train$SalePrice, main="Variation of SalePrice w.r.t Living Area", 
+  	xlab="Above grade (ground) living area square feet", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GrLivArea), col="black") # regression line 
+```
+This plot clearly shows that the Living area above grade has a strong positive linear relationship with the Sale price.
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+
+plot(dt.train$GarageArea, dt.train$SalePrice, main="Variation of SalePrice w.r.t Garage Area", 
+  	xlab="Garage Area ", ylab="Sales Price ", pch=20, col = "red")
+abline(lm(dt.train$SalePrice~dt.train$GarageArea), col="black") # regression line
+```
+
+This plot clearly shows that the Garage Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+
+plot(dt.train$TotalBsmtSF, dt.train$SalePrice, main="Variation of SalePrice w.r.t Total Basement Area", 
+  	xlab="TotalBsmtSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(1, 3000))
+abline(lm(dt.train$SalePrice~dt.train$TotalBsmtSF), col="black") # regression line
+```
+This plot clearly shows that the Total Basement Area has a strong positive linear relationship with the Sale price.But, this graph has lot of data points concentrated at units '0' which results in an anomaly. There are considerable amount of houses with no basement at all. That resulted in this anomaly
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+
+
+plot(dt.train$X1stFlrSF, dt.train$SalePrice, main="Variation of SalePrice w.r.t FirstFloorArea", 
+  	xlab="X1stFlrSF ", ylab="Sales Price ", pch=20, col = "red",xlim = c(250, 2500))
+abline(lm(dt.train$SalePrice~dt.train$X1stFlrSF), col="black") # regression line
+```
+
+This plot clearly shows that the First Floor area has a strong positive linear relationship with the Sale price.
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+par(mfrow=c(1,1))
+#Categorical Varaible
+
+p <- ggplot(dt.train, aes(factor(OverallQual), SalePrice)) + geom_violin(scale = "width")
+```
+
+This violin plot shows probability density of the data at different values. For a house with maximum(10) Over all Quality has very high spread and distribution is close to normal where as Over all Quality with 2 has no standard probability and has minimum spread. Rest of the values has close to normal distribution with mean value increasing as the Over all Quality increase
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+#par(mfrow=c(2,1))
+boxplot(dt.train$SalePrice~dt.train$OverallCond, data=dt.train, notch=FALSE, 
+  col=(c("gold","darkgreen")),
+  main="Overall House Condition and Price", xlab="Overal Condition")
+```
+
+It is quiet evident that OverallCond with 5 units has many outliers and mean sales price of houses with more than 5 rating for Over all condition is similar 
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+boxplot(dt.train$SalePrice~dt.train$GarageCars, data=dt.train, notch=FALSE, 
+  col=(c("gold","red")),
+  main="Garage Cars and Price", xlab="Garage Cars")
+```
+
+This plot shows that houses with 3 car Garage Space has suprisingly greater mean than the rest of the values 
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+dt.train$bathrooms <- dt.train$FullBath + 0.5*dt.train$HalfBath
+boxplot(dt.train$SalePrice~dt.train$bathrooms, data =dt.train, notch = FALSE,col=(c("gold","red")),
+  main="Bathrooms and Sales price", xlab="Total Bathrooms")
+```
+
+Data given has Full and Half bathrooms. Here, we combined those columns to see data so that both full and half bathroom quantity is quantized in a single value. Box plot clearly shows that prices for each value of 1,1.5, 2 and 2.5 house prices are quite similar to each other as the width of box is short
+
+```{r , include=T,echo=F, fig.height=5, fig.width=8}
+boxplot(dt.train$SalePrice~dt.train$Neighborhood, data =dt.train, notch = FALSE,col=(c("gold","red")),
+  main="Neighborhood and Sales price", xlab="", las=2)
+```
+
+Viewing the most influential Numerical Features using a  Correlation Plot 
+
+```{r Correlation Plot, include=T,echo=F, fig.height=5, fig.width=8}
+
 correlations <- cor(dt.train[, numeric_var], use = "everything")
 corrplot(correlations, method = "circle", type="lower",  sig.level = 0.01, insig = "blank", tl.col = "grey",tl.cex = 0.6)
+
+
 ```
+
+Above Correlation heat map helps to visualize correlation between different combinations of variables
+Inspecting Multicolinearity between features in order to eliminate highly corelated features.
 
 ```{r inspecting multicolinearity, include=F}
 
@@ -354,7 +499,8 @@ for(i in 1:nrow(df.corr)){
 df.mul.cor <- as.data.frame(df.mul.cor)
 
 ```
-Following table contains the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors 
+
+Following table contains the combinations of variables with highest correlation which has a minimum of 0.6 as corelation value. This will identify redundant predictors or set of variables which provide similar kind of information.
 
 ```{r, include=T, echo=F}
 
@@ -363,8 +509,18 @@ kable(df.mul.cor, row.names=FALSE)
 
 ```
 
-Combining Bath into one variable 
-BsmtFullbath, BsmtHalfBath, FullBath, HalfBath
+It makes sense to see the X1stFlrSF & X2ndFlrSF are highly correlated with GrLivArea & TotalBsmtSF. Another interesting observation is the GarageCars being highly related to the GarageArea. So taking one of these variable will give the same amount of information gain to the model.
+
+## Feature Engineering
+
+### Combining Few Features
+
+After looking more closely into the data via Visualizations and also looking into the collinearities between different variables we came to the conclusion that some of the variable could be combined to form a strong predicting features.
+The following features were created:
+1. Combining Bath into one variable BsmtFullbath, BsmtHalfBath, FullBath, HalfBath
+    Bathrooms = BsmtFullbath + FullBath + 0.5(BsmtHalfBath+HalfBath)
+2. Combining the all the Porch variable to single Porch predictor.
+    Porch = WoodDeckSF + OpenPorchSF + EnclosedPorch + X3SsnPorch + ScreenPorch
 
 ```{r, include=T, echo=F}
 dt.train$bathrooms <- dt.train$BsmtFullBath+ (0.5  * dt.train$BsmtHalfBath) +dt.train$FullBath+ (0.5*dt.train$HalfBath)
@@ -382,74 +538,9 @@ dt.test$totalRoom <- dt.test$TotRmsAbvGrd + dt.test$KitchenAbvGr
 
 ```
 
+As observed in the Data Exploration, there is a lot of skewness(right) in the target variable SalePrice. So we have applied Log transformation to eliminate the skewness.
 
-can be removed.
-
-
-
-lasso_mod <- train(frmla, data = dt.train,
-                   preProcess = c("center", "scale"),
-                   method = "glmnet",
-                   tuneGrid= expand.grid(
-                     alpha=1,
-                     lambda = 0:20/20))
-
-#plot(lasso_mod)
-plot(lasso_mod$finalModel)
-legend(num_coef$variables)
-
-lasso_mod$finalModel$tuneValue
-num_coef <- data.frame(as.matrix(coef(lasso_mod$finalModel, lasso_mod$finalModel$tuneValue$lambda)))
-num_coef$variables <- rownames(num_coef)
-num_coef$coeffiecient <- num_coef$X1
-rownames(num_coef) <- NULL
-num_coef$X1 <- NULL
-num_coef[order(-abs(num_coef$coeffiecient)),]
-
-rmse(dt.train$SalePrice,predict(lasso_mod, newdata = dt.train))
-
-RMSLE <- function(A, P) {
-    return (sqrt(sum((log(P+1)-log(A+1))^2)/length(A)))
-}
-RMSLE(dt.train$SalePrice,predict(lasso_mod, newdata = dt.train))
-
-ridge_mod <- train(frmla, 
-                data = dt.train,
-                preProcess = c("center", "scale"),
-                method = "glmnet",
-                tuneGrid= expand.grid(
-                  alpha=0,
-                  lambda = 0:10))
-#plot(ridge_mod)
-
-lm_mod <- train(frmla, 
-                data = dt.train,
-               preProcess = c("center", "scale"),
-                method = "lm")
-
-compare_temp  <- data.frame(variables = as.character(names(coef(lm_mod$finalModel))))
-
-compare_temp$method <- rep("lasso")
-compare_temp$coefs <- c(as.numeric(as.character(coef(lasso_mod$finalModel, 
-                                                     lasso_mod$finalModel$tuneValue$lambda))))
-
-compare <- data.frame(variables = rep(as.character(names(coef(lm_mod$finalModel))),2))
-compare$method <- c(rep("ridge"), rep("lm"))
-compare$coefs <- c(as.numeric(as.character(coef(ridge_mod$finalModel, ridge_mod$bestTune$lambda))),
-                   as.numeric(as.character(coef(lm_mod$finalModel))))
-
-compare <- rbind(compare, compare_temp)
-
-ggplot(compare, aes(variables, coefs, group=method, fill=method)) + 
-  geom_bar(stat = "identity",position="dodge") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-
-
-
-## Feature Selection
-
-```{r}
+```{r, include=F}
 
 dt.train1 <- dt.train
 dt.test1 <- dt.test
@@ -461,11 +552,21 @@ hist(dt.train$SalePriceL)
 
 dt.train$SalePrice <- dt.train$SalePriceL
 dt.train$SalePriceL <- NULL
+```
 
+We also observed few other variables had similar kind of skewness, taking 0.75 as threshold these were the variables which were skewed the most. 
+
+```{r, include=T, echo=F}
 # train set
 skewed_feats <- sapply(numCols.tr,function(x){skewness(dt.train[[x]],na.rm=TRUE)})
 
 skewed_feats <- skewed_feats[skewed_feats > 0.75]
+
+skewed_feats.df <- as.data.frame(skewed_feats)
+
+colnames(skewed_feats.df) <- c("Skewness")
+
+kable(skewed_feats.df)
 
 for(x in names(skewed_feats)) {
   dt.train[[x]] <- log(dt.train[[x]] + 1)
@@ -478,8 +579,19 @@ skewed_feats <- skewed_feats[skewed_feats > 0.75]
 for(x in names(skewed_feats)) {
   dt.test[[x]] <- log(dt.test[[x]] + 1)
 }
+```
+
+These variable might skew the prediction as weel, so Log transformation is applied to these variables to normalize them. 
+
+## Feature Selection
+
+This dataset is highly dimensional with about 79 predictors. Not all predictors are important or have enough predictive power to contribute to the final model estimating the house price. Also good predictor/estimators should, on average have, small prediction errors. 
+Here we have used Lasso & Ridge Regression to select the variables automatically. These will only help in the initial screening and filter of the predictors, but finally the predictor will be picked with the help of domain knowledge.
 
 
+#### Feature Selection with Ridge Regression
+
+```{r ridge Regressiin , include=F}
 X_train <- dt.train
 X_train$Id <- NULL
 X_test <- dt.test
@@ -503,7 +615,7 @@ model_ridge <- train(SalePrice~.,
                   tuneGrid=expand.grid(alpha=0, # Ridge regression
                                        lambda=lambdas))
 
-ggplot(data=filter(model_ridge$result,RMSE<0.14)) +
+ggplot(data=filter(model_ridge$result,RMSE<0.17)) +
     geom_line(aes(x=lambda,y=RMSE))
 
 coef <- data.frame(coef.name = dimnames(coef(model_ridge$finalModel,s=model_ridge$bestTune$lambda))[[1]], 
@@ -512,8 +624,8 @@ coef <- data.frame(coef.name = dimnames(coef(model_ridge$finalModel,s=model_ridg
 # exclude the (Intercept) term
 coef <- coef[-1,]
 
-picked_features <- nrow(filter(coef,coef.value!=0))
-not_picked_features <- nrow(filter(coef,coef.value==0))
+picked_features <- nrow(filter(coef,coef.value>=0.01))
+not_picked_features <- nrow(filter(coef,coef.value < 0.01))
 
 cat("ridge picked",picked_features,"variables and eliminated the other",
     not_picked_features,"variables\n")
@@ -524,18 +636,25 @@ coef <- arrange(coef,-coef.value)
 # extract the top 10 and bottom 10 features
 imp_coef <- rbind(head(coef,15),
                   tail(coef,15))
+```
 
-
+```{r ridgeRegressioncontinues, include=T,echo=F}
 ggplot(imp_coef) +
     geom_bar(aes(x=reorder(coef.name,coef.value),y=coef.value),
              stat="identity") +
-    ylim(-0.3,0.3) +
+    ylim(-0.1,0.1) +
     coord_flip() +
-    ggtitle("Coefficents in the Ridge Model") +
+    ggtitle("Top Predictors picked by Ridge Model") +
     theme(axis.title=element_blank())
 
+```
 
+The following coeffcients picked by Ridge regression have the highest importantance :
+OverallQual, GrLivArea, OverallCond, GarageCars, Neighborhood, TotalBsmtSF, TotRmsAbvGrd, GarageArea, KitchenAbvGr, BldgType
 
+One problem with ridge regression is it will not zero out the coeffiecient, so setting the threshold to pick the variables is a little tricky.
+
+```{r Lasso Regression, include=F}
 set.seed(123)  # for reproducibility
 model_lasso <- train(SalePrice~., 
                 data = X_train,
@@ -558,46 +677,120 @@ coef <- coef[-1,]
 picked_features <- nrow(filter(coef,coef.value!=0))
 not_picked_features <- nrow(filter(coef,coef.value==0))
 
-cat("Lasso picked",picked_features,"variables and eliminated the other",
-    not_picked_features,"variables\n")
 
 # sort coefficients in ascending order
 coef <- arrange(coef,-coef.value)
 
-# extract the top 10 and bottom 10 features
 imp_coef <- rbind(head(coef,15),
                   tail(coef,15))
 
+`cat("Lasso picked",picked_features,"variables and eliminated the other",
+    not_picked_features,"variables\n")`
+```
+
+    
+```{r lassocontinues, include=T, echo=F}
 
 ggplot(imp_coef) +
     geom_bar(aes(x=reorder(coef.name,coef.value),y=coef.value),
              stat="identity") +
     ylim(-0.3,0.3) +
     coord_flip() +
-    ggtitle("Coefficents in the Lasso Model") +
+    ggtitle("Top Predictors picked by Lasso Model") +
     theme(axis.title=element_blank())
-
-coef
-
-imp_coef$coef.name
-
-dt.train$Conditio
 
 ```
 
+The following are the important variables picked by Lasso Model:
+GrLivArea, OverallQual, YearBuilt, OverallCond, GarageCars, bathrooms, Neighborhood, TotalBsmtSF, KitchenAbvGr, YearRemodAdd, Heating, porch, BldgType, MSSubClass, Foundation, LotArea, LotShape, Exterior1st
 
-GrLivArea     OverallQual   YearBuilt      
-Neighborhood  LotArea       GarageCars
-bathrooms     TotalBsmtSF
-                                                
-Functional       ExterQual        HeatingQC         PoolQC           
-KitchenAbvGr        Condition2  
+Unlike Ridge Regression Lasso make the unimportant variable coeffiencients Zero, thus selecting the varaible automatically.
 
-OverallCond 
+```{r, include=F}
 
-Creating model ensemble 
+lambda.grid <- 10^seq(2,-2,length=100)
+alpha.grid <- seq(0,1,length=10)
+srchGrd = expand.grid(.alpha=alpha.grid,.lambda=lambda.grid)
+set.seed(123)
 
-```{r}
+model_els <- train(SalePrice~., 
+                data = X_train,
+                  method="glmnet",
+                preProcess = c("center", "scale"),
+                  metric="RMSE",
+                  maximize=FALSE,
+                  trControl=train.cr,
+                tuneGrid = srchGrd)
+
+
+coef <- data.frame(coef.name = dimnames(coef(model_els$finalModel,s=model_els$bestTune$lambda))[[1]], 
+           coef.value = matrix(coef(model_els$finalModel,s=model_els$bestTune$lambda)))
+
+# exclude the (Intercept) term
+coef <- coef[-1,]
+
+picked_features <- nrow(filter(coef,coef.value!=0))
+not_picked_features <- nrow(filter(coef,coef.value==0))
+
+
+# sort coefficients in ascending order
+coef <- arrange(coef,-coef.value)
+
+imp_coef <- rbind(head(coef,15),
+                  tail(coef,15))
+
+```
+
+    
+```{r lassocontinues, include=T, echo=F}
+
+ggplot(imp_coef) +
+    geom_bar(aes(x=reorder(coef.name,coef.value),y=coef.value),
+             stat="identity") +
+    ylim(-0.3,0.3) +
+    coord_flip() +
+    ggtitle("Top Predictors picked by Elastic Net Model") +
+    theme(axis.title=element_blank())
+
+```
+
+The following are the important variables picked by Lasso Model:
+GrLivArea, OverallQual, bathrooms, OverallCond, GarageCars, YearBuilt, X1stFlrSFm Neighborhood, TotalBsmtSF, KitchenAbvGr, YearRemodAdd, Heating, porch, CentralAir, MSSubClass, Foundation, LotArea, LotShape, Exterior1st
+
+Unlike Ridge Regression Lasso make the unimportant variable coeffiencients Zero, thus selecting the varaible automatically.
+
+************** WRITE ABOUT PREDICTORS WE FINALYY PICKED ***************
+
+"MSSubClass","MSZoning","LotShape","LandContour",
+                    "BldgType","HouseStyle","OverallCond",
+                    "YearRemodAdd","Exterior1st","Exterior2nd","MasVnrArea","ExterQual",
+                    "Foundation","BsmtQual","BsmtCond","BsmtFinType1","BsmtFinSF1",
+                    "BsmtFinType2","BsmtUnfSF","HeatingQC","CentralAir",
+                    "X1stFlrSF","X2ndFlrSF","BsmtFullBath","FullBath","HalfBath",
+                    "BedroomAbvGr","KitchenAbvGr","KitchenQual","TotRmsAbvGrd","Functional",
+                    "Fireplaces","FireplaceQu","GarageType","GarageYrBlt","GarageFinish","GarageArea","GarageQual","GarageCond","PavedDrive",
+                    "porch","Fence"
+                    GrLivArea    + OverallQual +  YearBuilt  +    Neighborhood + LotArea +      GarageCars +bathrooms    + TotalBsmtSF
+                    
+                    ###########################################
+                    or why these variables wer removed
+                    ########################################
+                    
+                    REJECTED_ATTR <- c("LotFrontage","Street","Utilities","LotConfig","Condition2","RoofMatl",
+                   "ExterCond","BsmtFinSF2","Heating","LowQualFinSF","BsmtHalfBath",
+                   "X3SsnPorch","ScreenPorch","PoolArea","PoolQC","MiscFeature","MiscVal",
+                   "MoSold","YrSold","SaleType")
+                    
+****************************end ****************************************            
+        
+
+
+## Model Development
+
+We will use the predictor derived from the above methods and built a strong prediction model. The Train dataset will be again split into (25%)test and (75%)train. This will help in estimating the RMSE of the final testset. 
+RMSE & the variation of the RMSE from train to test set will be our performance indicators for fitting the final model.
+
+```{r trainsetSplit, include=F}
 
 index <- sample(1:(0.75*nrow(dt.train)), replace = FALSE)
 
@@ -606,13 +799,8 @@ nrow(t.train)
 t.test <- dt.train[-index,]
 nrow(t.test)
 
-```
 
-
-```{r}
-
-
-testPredictors <- c("MSSubClass","MSZoning","LotShape","LandContour",
+Predictors <- c("MSSubClass","MSZoning","LotShape","LandContour",
                     "BldgType","HouseStyle","OverallCond",
                     "YearRemodAdd","Exterior1st","Exterior2nd","MasVnrArea","ExterQual",
                     "Foundation","BsmtQual","BsmtCond","BsmtFinType1","BsmtFinSF1",
@@ -620,29 +808,32 @@ testPredictors <- c("MSSubClass","MSZoning","LotShape","LandContour",
                     "X1stFlrSF","X2ndFlrSF","BsmtFullBath","FullBath","HalfBath",
                     "BedroomAbvGr","KitchenAbvGr","KitchenQual","TotRmsAbvGrd","Functional",
                     "Fireplaces","FireplaceQu","GarageType","GarageYrBlt","GarageFinish","GarageArea","GarageQual","GarageCond","PavedDrive",
-                    "porch","Fence")
+                    "porch")
 
-confirmed <- NULL
 final_formula <- "SalePrice ~ GrLivArea    + OverallQual +  YearBuilt  +    Neighborhood + LotArea +      GarageCars +bathrooms    + TotalBsmtSF"
-for(variable in testPredictors){
-      final_formula <- paste(final_formula,"+",variable)
+for(variable in Predictors){
+    final_formula <- paste(final_formula,"+",variable)
 }
 final_formula
 
 frmla <- formula(final_formula)
+```
 
 
+### Linear model 
 
-#### linear model #####
+This will be our baseline model. Also will help seeing how the selector predictors are performing.
 
+```{r linear Model, include=F}
+
+set.seed(123)
 lm.standard <- train(frmla, preProcess=c("center","scale"), data = t.train, method="lm")
+
 
 rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1)
 rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1)
 
 coefplot(lm.standard$finalModel)
-
-
 
 result <- exp(predict(lm.standard, newdata = dt.test)) -1
 
@@ -655,9 +846,24 @@ str(result)
 
 dt.result <- as.data.frame(dt.result, row.names = NULL)
 
-write.csv(dt.result, 'Result_lmmm.csv')
+write.csv(dt.result, 'Result_lmmm.csv', row.names = FALSE)
+```
 
+```{r, include=T,echo=F, warning=F}
 
+cat("RMSE of the Linear model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1))
+
+cat("RMSE of the Linear model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1))
+
+cat("R squared value of the Linear model : ", lm.standard$results$Rsquared)
+
+```
+
+Clearly the linear Model is overfitting. This might because Linear regression with so many variable tend to overfit sometimes. Moving to XGBoosted regression model to see how it weighs the predictors and see if it can eliminate some more predictors.
+
+### XG Boosted Model
+
+```{r XG Boosted, include=F}
 #### xgboost #####
 CARET.TUNE.GRID <-  expand.grid(nrounds=800, 
                                 max_depth=10, 
@@ -665,16 +871,33 @@ CARET.TUNE.GRID <-  expand.grid(nrounds=800,
                                 gamma=0.1, 
                                 colsample_bytree=0.4, 
                                 min_child_weight=1)
+
 xgBoostm <- train(frmla, preProcess=c("center","scale"), 
                   data = t.train, method="xgbTree",
                   metric="RMSE",
                   tuneGrid=CARET.TUNE.GRID
                   )
 
+
 rmse(exp(t.test$SalePrice)-1,exp(predict(xgBoostm, newdata = t.test))-1)
+
 
 rmse(exp(t.train$SalePrice)-1,exp(predict(xgBoostm, newdata = t.train))-1)
 
+```
+
+
+```{r, include=T,echo=F, warning=F}
+
+cat("RMSE of the XG Boosted model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(xgBoostm, newdata = t.train))-1))
+
+cat("RMSE of the XG Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(xgBoostm, newdata = t.test))-1))
+
+```
+
+### Gradient Boosting Model
+
+```{r, include=F}
 
 #### GBM ####
 CARET.TUNE.GRID <-  expand.grid(n.trees=100, 
@@ -682,27 +905,59 @@ CARET.TUNE.GRID <-  expand.grid(n.trees=100,
                                 shrinkage=0.1,
                                 n.minobsinnode=10)
 
+
 gbm_mod <- train(frmla, preProcess=c("center","scale"), data = t.train,
                  method="gbm", metric="RMSE", tuneGrid=CARET.TUNE.GRID)
 
+
 rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1)
+
 
 rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1)
 
+```
 
+
+```{r, include=T,echo=F, warning=F}
+
+cat("RMSE of the Gradient Boosted model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1))
+
+cat("RMSE of the Gradient Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1))
+
+```
+
+### Random Forest 
+
+```{r ranger, include=F}
 ##### Random Forest ####
 CARET.TUNE.GRID <-  expand.grid(mtry=2*as.integer(sqrt(ncol(t.test))))
+
 
 ranger_mod <- train(frmla, preProcess=c("center","scale"), data = t.train, method="ranger"
                     , metric="RMSE", tuneGrid= CARET.TUNE.GRID)
 
+
 rmse(exp(t.test$SalePrice)-1,exp(predict(ranger_mod, newdata = t.test))-1)
+
 
 rmse(exp(t.train$SalePrice)-1,exp(predict(ranger_mod, newdata = t.train))-1)
 
+```
 
-##### Model Ensemble #####
+```{r, include=T,echo=F, warning=F}
 
+cat("RMSE of the Gradient Boosted model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1))
+
+cat("RMSE of the Gradient Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1))
+
+```
+
+
+### Model Ensemble
+
+The caretEnsemble method is used to create an ensembled model. 
+
+```{r model Ensemble, include=F}
 model_list <- caretList(frmla, 
                         data=dt.train,
                         trControl= trainControl(savePredictions = "final"),
@@ -710,39 +965,55 @@ model_list <- caretList(frmla,
                         methodList=c("gbm", "xgbTree", "ranger")
                         )
 
+
 summary(resamples(model_list))
 modelCor(resamples(model_list))
+
 
 ce <- caretEnsemble(model_list)
 summary(ce)
 
+
 rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1)
+
 
 rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1)
 
+
 result <- exp(predict(ce, newdata = dt.test))-1
+
 
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
 dt.result$SalePrice <- result
 
+
 str(dt.test)
 str(result)
 
+
 dt.result <- as.data.frame(dt.result, row.names = NULL)
 
-write.csv(dt.result, 'Result.csv')
+
+write.csv(dt.result, 'Result.csv', rorow.names = FALSE)
+```
 
 
-###### Model Stacking with NN ######
 
+
+### Model Ensemble with Nueral Net
+
+```{r, include=F}
 CARET.TRAIN.PARMS <- list(method="xgbTree") 
 
+
 CARET.TUNE.GRID <-  NULL  # NULL provides model specific default tuning parameters
+
 
 model_preds.t <- data.frame(gbm_yhat=predict(model_list$gbm, newdata = dt.train),
                                       xgb_yhat=predict(model_list$xgbTree, newdata = dt.train),
                                       rngr_yhat=predict(model_list$ranger, newdata = dt.train))
+
 
 # model specific training parameter
 CARET.TRAIN.CTRL <- trainControl(method="repeatedcv",
@@ -750,13 +1021,17 @@ CARET.TRAIN.CTRL <- trainControl(method="repeatedcv",
                                  repeats=1,
                                  verboseIter=FALSE)
 
+
 CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
                             maximize=FALSE,
                            tuneGrid=CARET.TUNE.GRID,
                            tuneLength=7,
                            metric="RMSE")
 
+
 MODEL.SPECIFIC.PARMS <- list(verbose=FALSE,linout=TRUE,trace=FALSE) #NULL # Other model specific parameters
+
+
 
 
 # train the model
@@ -766,24 +1041,31 @@ l1_nnet_mdl <- do.call(train,c(list(x=model_preds.t,y=dt.train$SalePrice),
                             MODEL.SPECIFIC.PARMS,
                             CARET.TRAIN.OTHER.PARMS))
 
+
 rmse(exp(dt.train$SalePrice)-1,exp(predict(l1_nnet_mdl))-1)
+
 
 model_preds <- data.frame(gbm_yhat=predict(gbm_mod, newdata = dt.test),
                                       xgb_yhat=predict(xgBoostm, newdata = dt.test),
                                       rngr_yhat=predict(ranger_mod, newdata = dt.test))
 
+
 result <- exp(predict(l1_nnet_mdl, newdata = model_preds)) -1
+
 
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
 dt.result$SalePrice <- result
 
+
 str(dt.test)
 str(result)
 
+
 dt.result <- as.data.frame(dt.result, row.names = NULL)
+
 
 write.csv(dt.result, 'Result.csv')
 
-
 ```
+
