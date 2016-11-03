@@ -807,8 +807,9 @@ Predictors <- c("MSSubClass","MSZoning","LotShape","LandContour",
                     "BsmtFinType2","BsmtUnfSF","HeatingQC","CentralAir",
                     "X1stFlrSF","X2ndFlrSF","BsmtFullBath","FullBath","HalfBath",
                     "BedroomAbvGr","KitchenAbvGr","KitchenQual","TotRmsAbvGrd","Functional",
-                    "Fireplaces","FireplaceQu","GarageType","GarageYrBlt","GarageFinish","GarageArea","GarageQual","GarageCond","PavedDrive",
-                    "porch")
+                    "Fireplaces","FireplaceQu","GarageType","GarageYrBlt",
+                    "GarageFinish","GarageArea","GarageQual","GarageCond",
+                    "PavedDrive","porch")
 
 final_formula <- "SalePrice ~ GrLivArea    + OverallQual +  YearBuilt  +    Neighborhood + LotArea +      GarageCars +bathrooms    + TotalBsmtSF"
 for(variable in Predictors){
@@ -859,7 +860,7 @@ cat("R squared value of the Linear model : ", lm.standard$results$Rsquared)
 
 ```
 
-Clearly the linear Model is overfitting. This might because Linear regression with so many variable tend to overfit sometimes. Moving to XGBoosted regression model to see how it weighs the predictors and see if it can eliminate some more predictors.
+Clearly the linear Model is overfitting. This might because Linear regression with so many variable tend to overfit sometimes. Moving to XGBoosted regression model to see how it performs.
 
 ### XG Boosted Model
 
@@ -877,13 +878,10 @@ xgBoostm <- train(frmla, preProcess=c("center","scale"),
                   metric="RMSE",
                   tuneGrid=CARET.TUNE.GRID
                   )
-
-
-rmse(exp(t.test$SalePrice)-1,exp(predict(xgBoostm, newdata = t.test))-1)
-
-
-rmse(exp(t.train$SalePrice)-1,exp(predict(xgBoostm, newdata = t.train))-1)
-
+features <- xgb.importance(xgBoostm$coefnames,model=xgBoostm$finalModel)
+features <- features[order(-features$Gain),]
+features$GainSc <- features$Gain*10000
+subset(features, GainSc>=1)
 ```
 
 
@@ -893,7 +891,11 @@ cat("RMSE of the XG Boosted model on train set : ", rmse(exp(t.train$SalePrice)-
 
 cat("RMSE of the XG Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(xgBoostm, newdata = t.test))-1))
 
+cat("Rsquared value of the XG Boosted Model : ",xgBoostm$results$Rsquared )
+
 ```
+
+XGBoosted model performs a lot better. Especially with the train set, but still it overfits a bit.
 
 ### Gradient Boosting Model
 
@@ -910,11 +912,6 @@ gbm_mod <- train(frmla, preProcess=c("center","scale"), data = t.train,
                  method="gbm", metric="RMSE", tuneGrid=CARET.TUNE.GRID)
 
 
-rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1)
-
-
-rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1)
-
 ```
 
 
@@ -924,7 +921,11 @@ cat("RMSE of the Gradient Boosted model on train set : ", rmse(exp(t.train$SaleP
 
 cat("RMSE of the Gradient Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1))
 
+cat("Rsquared value of the Gradient Boosted Model : ",gbm_mod$results$Rsquared )
+
 ```
+
+Results not as good as the XG Boosted Model on the test set, but outperforms it on the test set. Defintely better performance than the baseline linear model. 
 
 ### Random Forest 
 
@@ -982,23 +983,25 @@ rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1)
 
 result <- exp(predict(ce, newdata = dt.test))-1
 
-
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
 dt.result$SalePrice <- result
 
-
 str(dt.test)
 str(result)
 
-
 dt.result <- as.data.frame(dt.result, row.names = NULL)
-
 
 write.csv(dt.result, 'Result.csv', rorow.names = FALSE)
 ```
 
+```{r, include=T,echo=F, warning=F}
 
+cat("RMSE of the Ensembled(Random) model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1))
+
+cat("RMSE of the Ensembled model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1))
+
+```
 
 
 ### Model Ensemble with Nueral Net
