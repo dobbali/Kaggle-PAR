@@ -909,10 +909,18 @@ OverallQual, GrLivArea, TotalBsmtSF, bathrooms, YearBuilt, GarageCars, YearRemod
  LotArea, OverallCond, GarageArea, FireplaceQu, KitchenAbvGr,porch, GarageType,
 GarageYrBlt ,BldgType, Neighborhood, CentralAir, MSZoning,Functional, PavedDrive, TotRmsAbvGrd
 
+Readjusting the baseline Linear model with final predictors.
+
 ```{r}
-frmlaa <- formula("SalePrice ~ OverallQual, GrLivArea, TotalBsmtSF, bathrooms, YearBuilt, GarageCars, YearRemodAdd,
- LotArea, OverallCond, GarageArea, FireplaceQu, KitchenAbvGr,porch, GarageType,
-GarageYrBlt ,BldgType, Neighborhood, CentralAir, MSZoning,Functional, PavedDrive, TotRmsAbvGrd")
+frmlaa <- formula("SalePrice ~ OverallQual +  GrLivArea +  TotalBsmtSF +  bathrooms +  YearBuilt +  GarageCars +  YearRemodAdd + 
+ LotArea +  OverallCond +  GarageArea +  FireplaceQu +  KitchenAbvGr + porch +  GarageType + 
+GarageYrBlt  + BldgType +  Neighborhood +  CentralAir +  MSZoning + Functional +  PavedDrive +  TotRmsAbvGrd")
+
+set.seed(123)
+lm.standard <- train(frmlaa, preProcess=c("center","scale"), data = t.train, method="lm")
+
+rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1)
+rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1)
 
 ```
 
