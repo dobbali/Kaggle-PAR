@@ -125,7 +125,7 @@ for(i in 1:nrow(mis.vars)){
   }
 }
 
-colnames(mis.vars) <- c('No_of_NAs')
+colnames(mis.vars) <- c('No_of_NAs', 'Numerical(y/n)')
 kable(subset(mis.vars, No_of_NAs > 0 ))
 
 ```
@@ -157,7 +157,7 @@ for(i in 1:nrow(mis.vars.te)){
   }
 }
 
-colnames(mis.vars.te) <- c('No_of_NAs')
+colnames(mis.vars.te) <- c('No_of_NAs', 'Numerical(y/n)')
 kable(subset(mis.vars.te, No_of_NAs > 0 ))
 
 ```
@@ -295,8 +295,10 @@ for(name in char_var){
 
 ```
 
+Numerical Variables, 
+Checking for collinearity.
 
-```{r Feature Engineering, include=F}
+```{r Checking , include=F}
 
 numeric_var <- names(dt.train)[which(sapply(dt.train, is.numeric))]
 df.corr <- data.frame(cor(dt.train[,(numeric_var)], method="pearson"))
@@ -380,9 +382,10 @@ dt.test$totalRoom <- dt.test$TotRmsAbvGrd + dt.test$KitchenAbvGr
 
 ```
 
+
+can be removed.
 ```{r}
 
-frmla <- formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold")
 
 lasso_mod <- train(frmla, data = dt.train,
                    preProcess = c("center", "scale"),
@@ -444,20 +447,163 @@ ggplot(compare, aes(variables, coefs, group=method, fill=method)) +
 
 ```
 
+## Feature Selection
+
+```{r}
+
+dt.train1 <- dt.train
+dt.test1 <- dt.test
+
+dt.train$SalePriceL <- log(dt.train$SalePrice+1)
+
+hist(dt.train$SalePrice)
+hist(dt.train$SalePriceL)
+
+dt.train$SalePrice <- dt.train$SalePriceL
+dt.train$SalePriceL <- NULL
+
+# train set
+skewed_feats <- sapply(numCols.tr,function(x){skewness(dt.train[[x]],na.rm=TRUE)})
+
+skewed_feats <- skewed_feats[skewed_feats > 0.75]
+
+for(x in names(skewed_feats)) {
+  dt.train[[x]] <- log(dt.train[[x]] + 1)
+}
+
+# test set
+skewed_feats <- sapply(numCols.te,function(x){skewness(dt.test[[x]],na.rm=TRUE)})
+
+skewed_feats <- skewed_feats[skewed_feats > 0.75]
+for(x in names(skewed_feats)) {
+  dt.test[[x]] <- log(dt.test[[x]] + 1)
+}
+
+
+X_train <- dt.train
+X_train$Id <- NULL
+X_test <- dt.test
+y <- dt.train$SalePrice
+
+lambdas <- seq(1,0,-0.001)
+
+train.cr <- trainControl(method="repeatedcv",
+                                 number=5,
+                                 repeats=5,
+                                 verboseIter=FALSE)
+set.seed(123)
+
+model_ridge <- train(SalePrice~., 
+                data = X_train,
+                  method="glmnet",
+                  metric="RMSE",
+                preProcess = c("center", "scale"),
+                  maximize=FALSE,
+                  trControl=train.cr,
+                  tuneGrid=expand.grid(alpha=0, # Ridge regression
+                                       lambda=lambdas))
+
+ggplot(data=filter(model_ridge$result,RMSE<0.14)) +
+    geom_line(aes(x=lambda,y=RMSE))
+
+set.seed(123)  # for reproducibility
+model_lasso <- train(SalePrice~., 
+                data = X_train,
+                  method="glmnet",
+                preProcess = c("center", "scale"),
+                  metric="RMSE",
+                  maximize=FALSE,
+                  trControl=train.cr,
+                  tuneGrid=expand.grid(alpha=1,  # Lasso regression
+                                       lambda=c(1,0.1,0.05,0.01,seq(0.009,0.001,-0.001),
+                                            0.00075,0.0005,0.0001)))
+model_lasso
+
+coef <- data.frame(coef.name = dimnames(coef(model_lasso$finalModel,s=model_lasso$bestTune$lambda))[[1]], 
+           coef.value = matrix(coef(model_lasso$finalModel,s=model_lasso$bestTune$lambda)))
+
+# exclude the (Intercept) term
+coef <- coef[-1,]
+
+picked_features <- nrow(filter(coef,coef.value!=0))
+not_picked_features <- nrow(filter(coef,coef.value==0))
+
+cat("Lasso picked",picked_features,"variables and eliminated the other",
+    not_picked_features,"variables\n")
+
+# sort coefficients in ascending order
+coef <- arrange(coef,-coef.value)
+
+# extract the top 10 and bottom 10 features
+imp_coef <- rbind(head(coef,15),
+                  tail(coef,15))
+
+
+ggplot(imp_coef) +
+    geom_bar(aes(x=reorder(coef.name,coef.value),y=coef.value),
+             stat="identity") +
+    ylim(-0.3,0.3) +
+    coord_flip() +
+    ggtitle("Coefficents in the Lasso Model") +
+    theme(axis.title=element_blank())
+
+coef
+
+imp_coef$coef.name
+
+dt.train$Conditio
+
+```
+
+
+GrLivArea           OverallQual         YearBuilt           LotArea            
+OverallCond         GarageCars          bathrooms           BsmtFinSF1          
+Neighborhood  Functional       ExterQual        HeatingQC         PoolQC           
+KitchenAbvGr        Condition2  
+
 Creating model ensemble 
 
 ```{r}
-charCols.tr 
 
-tempF <- NULL
-for(name in charCols.tr){
-  tempF <- paste(tempF, "+", name)
-}
-tempF
+index <- sample(1:(0.75*nrow(dt.train)), replace = FALSE)
 
-table(is.na(dt.train$SalePrice))
+t.train <- dt.train[index,]
+nrow(t.train)
+t.test <- dt.train[-index,]
+nrow(t.test)
 
-frmla = formula("SalePrice ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtUnfSF + TotalBsmtSF  + GrLivArea + bathrooms + totalRoom + Fireplaces  + GarageArea + porch + YrSold+ MSZoning + LotShape + LandContour + Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + Condition2 + BldgType + HouseStyle + RoofStyle + RoofMatl + Exterior1st + Exterior2nd + MasVnrType + ExterQual + Foundation + BsmtQual + BsmtCond + BsmtExposure + BsmtFinType1 + BsmtFinType2 + Heating + HeatingQC  + KitchenQual + Functional + FireplaceQu + GarageType + GarageFinish + GarageQual + GarageCond + PavedDrive + PoolQC + Fence + MiscFeature ")
+```
+
+
+```{r}
+
+plot(dt.train$bathrooms, dt.train$SalePrice)
+
+frmla = formula("SalePrice ~ GrLivArea + OverallQual + YearBuilt + LotArea+GarageCars+bathrooms+Neighborhood + TotalBsmtSF")
+
+lm.standard <- train(frmla, preProcess=c("center","scale"), data = t.train, method="lm")
+
+coefplot(lm.standard$finalModel)
+
+rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1)
+
+rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1)
+
+
+xgBoostm <- train(frmla, preProcess=c("center","scale"), data = t.train, method="xgbTree")
+
+rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1)
+
+rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1)
+
+
+
+gbm_mod <- train(frmla, preProcess=c("center","scale"), data = t.train, method="gbm", metric="RMSE")
+
+rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1)
+
+rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1)
+
 
 
 
@@ -465,7 +611,7 @@ model_list <- caretList(frmla,
                         data=dt.train,
                         trControl= trainControl(savePredictions = "final"),
                         preProcess=c("center","scale"),
-                        methodList=c("rpart", "glmnet","gbm", "knn", "ranger")
+                        methodList=c("glmnet","gbm", "xgbTree", "ranger")
                         )
 
 summary(resamples(model_list))
@@ -474,8 +620,11 @@ modelCor(resamples(model_list))
 ce <- caretEnsemble(model_list)
 summary(ce)
 
-rmse(dt.train$SalePrice,predict(ce, newdata = dt.train))
-result <- predict(ce, newdata = dt.test)
+rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1)
+
+rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1)
+
+result <- exp(predict(ce, newdata = dt.test))-1
 
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
