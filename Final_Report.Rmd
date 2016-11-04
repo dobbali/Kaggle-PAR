@@ -1,18 +1,15 @@
 ---
 title: "Final_Report"
-author: "Sai Deepthi Matam, Sri Harsha Samanthula" 
-output: pdf_document
+author: "Sai Deepthi Matam, Sri Harsha Samanthula"
+output: word_document
 ---
 
 ## INTRODUCTION
 The primary requirement is a effective model to predict final selling price of houses in the city of Ames, Iowa for a given set of house features.
 
-### OBJECTIVE
-
   Initial focus of the project is to gain knowledge of the data and understand the relation between each of the variables to the house's sale price. Later, further statistical analysis will be conducted to see how strongly these features effect the house prices the most.
   
   Later, using the training data set, a best-fitting model will be constructed with the some strong variables as predictors of housing prices. Performance of various statistical models will be compared against each other to determine which model fits the best. The results from this projet will finally help in estimating the house prices in Ames, Iowa for given feature set. 
-
 
 ### ABOUT THE DATA
 
@@ -87,7 +84,7 @@ stats <- function(x){
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
-setwd("E:/MS/PAR/GroupProject/PAR-GP")
+# setwd("E:/MS/PAR/GroupProject/PAR-GP")
 #setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
@@ -207,7 +204,7 @@ dt.test$GarageArea <- bagImpute$GarageArea
 
 ```
 
-### Charactor/ Categorical Variables
+### Charactor / Categorical Variables
 NAs in character variables: All character variables contain the category of a certain feature available in the house. As per the data description from Kaggle, NAs in such cases means absence of that feature. Hence, replacing NAs with proper descriptive words. All the charactor variables are converted to the factor variables
 
 
@@ -247,7 +244,6 @@ dt.train$PoolQC <- ifelse(is.na(dt.train$PoolQC),"NoPool", dt.train$PoolQC)
 dt.train$Fence <- ifelse(is.na(dt.train$Fence),"NoFence", dt.train$Fence)
 
 dt.train$MiscFeature <- ifelse(is.na(dt.train$MiscFeature),"NoFence", dt.train$MiscFeature)
-
 
 dt.test$Alley <- ifelse(is.na(dt.test$Alley),"No Alley", dt.test$Alley)
 
@@ -465,7 +461,7 @@ boxplot(dt.train$SalePrice~dt.train$Neighborhood, data =dt.train, notch = FALSE,
   main="Neighborhood and Sales price", xlab="", las=2)
 ```
 
-Viewing the most influential Numerical Features using a  Correlation Plot 
+Viewing the most influential Numerical Features using a Correlation Plot 
 
 ```{r Correlation Plot, include=T,echo=F, fig.height=5, fig.width=8}
 
@@ -529,7 +525,6 @@ dt.train$porch <- dt.train$WoodDeckSF + dt.train$OpenPorchSF + dt.train$Enclosed
 
 dt.train$totalRoom <- dt.train$TotRmsAbvGrd + dt.train$KitchenAbvGr
 
-
 dt.test$bathrooms <- dt.test$BsmtFullBath+ (0.5  * dt.test$BsmtHalfBath) +dt.test$FullBath+ (0.5*dt.test$HalfBath)
 
 dt.test$porch <- dt.test$WoodDeckSF + dt.test$OpenPorchSF + dt.test$EnclosedPorch + dt.test$X3SsnPorch + dt.test$ScreenPorch
@@ -581,7 +576,7 @@ for(x in names(skewed_feats)) {
 }
 ```
 
-These variable might skew the prediction as weel, so Log transformation is applied to these variables to normalize them. 
+These variable might skew the prediction as well, so Log transformation is applied to these variables to normalize them. 
 
 ## Feature Selection
 
@@ -684,8 +679,8 @@ coef <- arrange(coef,-coef.value)
 imp_coef <- rbind(head(coef,15),
                   tail(coef,15))
 
-`cat("Lasso picked",picked_features,"variables and eliminated the other",
-    not_picked_features,"variables\n")`
+cat("Lasso picked",picked_features,"variables and eliminated the other",
+    not_picked_features,"variables\n")
 ```
 
     
@@ -706,7 +701,7 @@ GrLivArea, OverallQual, YearBuilt, OverallCond, GarageCars, bathrooms, Neighborh
 
 Unlike Ridge Regression Lasso make the unimportant variable coeffiencients Zero, thus selecting the varaible automatically.
 
-```{r, include=F}
+```{r Elastic Net, include=F}
 
 lambda.grid <- 10^seq(2,-2,length=100)
 alpha.grid <- seq(0,1,length=10)
@@ -742,7 +737,7 @@ imp_coef <- rbind(head(coef,15),
 ```
 
     
-```{r lassocontinues, include=T, echo=F}
+```{r Elasticnetcontinues, include=T, echo=F}
 
 ggplot(imp_coef) +
     geom_bar(aes(x=reorder(coef.name,coef.value),y=coef.value),
@@ -754,10 +749,11 @@ ggplot(imp_coef) +
 
 ```
 
-The following are the important variables picked by Lasso Model:
+The following are the important variables picked by Elastic Net:
 GrLivArea, OverallQual, bathrooms, OverallCond, GarageCars, YearBuilt, X1stFlrSFm Neighborhood, TotalBsmtSF, KitchenAbvGr, YearRemodAdd, Heating, porch, CentralAir, MSSubClass, Foundation, LotArea, LotShape, Exterior1st
 
-Unlike Ridge Regression Lasso make the unimportant variable coeffiencients Zero, thus selecting the varaible automatically.
+Elastic Net performs better with predictors which are highly correlated with each other.
+
 
 ************** WRITE ABOUT PREDICTORS WE FINALYY PICKED ***************
 
@@ -780,18 +776,23 @@ Unlike Ridge Regression Lasso make the unimportant variable coeffiencients Zero,
                    "ExterCond","BsmtFinSF2","Heating","LowQualFinSF","BsmtHalfBath",
                    "X3SsnPorch","ScreenPorch","PoolArea","PoolQC","MiscFeature","MiscVal",
                    "MoSold","YrSold","SaleType")
+                   
+                   Out of all the predictors PoolQC, Misc Feature, MiscVal, SaleType have 95% of values unchanged. These kind of variables tend to not contribute to the prediction in any way. As 95% of the PoolQC of values are Not avaiables, Pool area for those values is zero. They would influence prediction to very negligible extend. Hence, ignored. Same is the case with Heating, BsmtHalfBat, ExterCond, Street, Utilities, LotConfig etc., They either have more that 95% of the values with a default setting or zero's which will not provide significant impact on predictions as there is no variablity in the values. 
+
                     
 ****************************end ****************************************            
-        
 
 
 ## Model Development
 
 We will use the predictor derived from the above methods and built a strong prediction model. The Train dataset will be again split into (25%)test and (75%)train. This will help in estimating the RMSE of the final testset. 
+
 RMSE & the variation of the RMSE from train to test set will be our performance indicators for fitting the final model.
 
-```{r trainsetSplit, include=F}
+We will use the predictor derived from the above methods and built a strong prediction model. 25% of the train set has been used as Validation set while model is build on rest of the 75%. This will help in estimating the RMSE of the final test set. 
 
+```{r trainsetSplit, include=F}
+set.seed(123)
 index <- sample(1:(0.75*nrow(dt.train)), replace = FALSE)
 
 t.train <- dt.train[index,]
@@ -860,7 +861,7 @@ cat("R squared value of the Linear model : ", lm.standard$results$Rsquared)
 
 ```
 
-Clearly the linear Model is overfitting. This might because Linear regression with so many variable tend to overfit sometimes. Moving to XGBoosted regression model to see how it performs.
+Clearly the linear Model is overfitting. This might because Linear regression with so many variable tend to overfit sometimes. Moving to XGBoosted regression model to see how it performs and also to extract the strongest predictors.
 
 ### XG Boosted Model
 
@@ -895,7 +896,8 @@ cat("Rsquared value of the XG Boosted Model : ",xgBoostm$results$Rsquared )
 
 ```
 
-XGBoosted model performs a lot better. Especially with the train set, but still it overfits a bit. Looking at the feature importance from the XG boosted model
+XGBoosted model performs a lot better. Especially with the train set, but still it overfits a bit. 
+Looking at the feature importance from the XG boosted model
 
 ```{r XGBoosted, include=T, echo=F}
 kable(subset(features, GainSc>=5))
@@ -909,12 +911,12 @@ OverallQual, GrLivArea, TotalBsmtSF, bathrooms, YearBuilt, GarageCars, YearRemod
  LotArea, OverallCond, GarageArea, FireplaceQu, KitchenAbvGr,porch, GarageType,
 GarageYrBlt ,BldgType, Neighborhood, CentralAir, MSZoning,Functional, PavedDrive, TotRmsAbvGrd
 
-Readjusting the baseline Linear model with final predictors.
+Readjusting the baseline Linear model with predictors obtained from XGboost model above.
 
-```{r}
-frmlaa <- formula("SalePrice ~ OverallQual +  GrLivArea +  TotalBsmtSF +  bathrooms +  YearBuilt +  GarageCars +  YearRemodAdd + 
- LotArea +  OverallCond +  GarageArea +  FireplaceQu +  KitchenAbvGr + porch +  GarageType + 
+```{r, include=F}
+frmlaa <- formula("SalePrice ~ OverallQual +  GrLivArea +  TotalBsmtSF +  bathrooms +  YearBuilt +  GarageCars +  YearRemodAdd +  LotArea +  OverallCond +  GarageArea +  FireplaceQu +  KitchenAbvGr + porch +  GarageType + 
 GarageYrBlt  + BldgType +  Neighborhood +  CentralAir +  MSZoning + Functional +  PavedDrive +  TotRmsAbvGrd")
+
 
 set.seed(123)
 lm.standard <- train(frmlaa, preProcess=c("center","scale"), data = t.train, method="lm")
@@ -922,8 +924,41 @@ lm.standard <- train(frmlaa, preProcess=c("center","scale"), data = t.train, met
 rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1)
 rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1)
 
+#xgBoostm <- train(frmlaa, preProcess=c("center","scale"), 
+ #                 data = t.train, method="xgbTree",
+ #                 metric="RMSE",
+ #                 tuneGrid=CARET.TUNE.GRID
+                  #)
+
+
+#result <- exp(predict(lm.standard, newdata = dt.test)) -1
+
+#dt.result <- NULL
+#dt.result$Id <- dt.test$Id
+#dt.result$SalePrice <- result
+
+#str(dt.test)
+#str(result)
+
+#dt.result <- as.data.frame(dt.result, row.names = NULL)
+
+#write.csv(dt.result, 'Result_lmmm_adj.csv', row.names = FALSE)
+
+
 ```
 
+```{r, include=F}
+
+cat("RMSE of the Linear model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(lm.standard, newdata = t.train))-1))
+
+cat("RMSE of the Linear model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(lm.standard, newdata = t.test))-1))
+
+cat("R squared value of the Linear model : ", lm.standard$results$Rsquared)
+
+```
+
+With the new set of predictors obtained from XGboost, this new baseline linear model performed well if we use R2 as indicator but this model is overfitting as the differnce between training and validation set it quite hight.
+It can be concluded that the predictive power is not that great and hence not performing better than XGboost on validation test data set.
 
 ### Gradient Boosting Model
 
@@ -953,7 +988,7 @@ cat("Rsquared value of the Gradient Boosted Model : ",gbm_mod$results$Rsquared )
 
 ```
 
-Results not as good as the XG Boosted Model on the test set, but outperforms it on the test set. Defintely better performance than the baseline linear model. 
+Difference between model performance is not so significant but results of Gradient Boosted Model are not as good as the XG Boosted Model on the test set, but outperforms it on the train set. It has defintely better performance than the baseline linear model. Even though bias is reduc
 
 ### Random Forest 
 
@@ -975,12 +1010,15 @@ rmse(exp(t.train$SalePrice)-1,exp(predict(ranger_mod, newdata = t.train))-1)
 
 ```{r, include=T,echo=F, warning=F}
 
-cat("RMSE of the Gradient Boosted model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(gbm_mod, newdata = t.train))-1))
+cat("RMSE of the Random forest model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(ranger_mod, newdata = t.train))-1))
 
-cat("RMSE of the Gradient Boosted model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(gbm_mod, newdata = t.test))-1))
+cat("RMSE of the Random forest model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(ranger_mod, newdata = t.test))-1))
+
+cat("Rsquared value of the Random forest Model : ",ranger_mod$results$Rsquared )
 
 ```
 
+Random forest regressor has the lowest RMSE on train set compared with other models but it the worst performer when implemented on test set. The model is being overfitted a lot and  R2 value is also low compared to XGboost.
 
 ### Model Ensemble
 
@@ -1005,11 +1043,11 @@ summary(ce)
 
 rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1)
 
-
 rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1)
 
 
 result <- exp(predict(ce, newdata = dt.test))-1
+
 
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
@@ -1023,16 +1061,26 @@ dt.result <- as.data.frame(dt.result, row.names = NULL)
 write.csv(dt.result, 'Result.csv', rorow.names = FALSE)
 ```
 
+Even though Ensemble methods take lot of computation power they are well know to achieve enhanced predictive performance. Here, predicitions of Gradient boost , XGboost and Random Forest methods are combined together
+
+
 ```{r, include=T,echo=F, warning=F}
 
 cat("RMSE of the Ensembled(Random) model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1))
 
 cat("RMSE of the Ensembled model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1))
 
+cat("Rsquared value of the Ensembled Model : ",ce$results$Rsquared )
+
+
 ```
 
+As expected, Ensemble method worked well compared to individual models. RSME values of train and test sets are pretty close to each other. Here data sets are equal in size and RSME values of train and test sets being proportional to each other indicates that the model is reliable.  
 
-### Model Ensemble with Nueral Net
+From the summary of ensembled model, it is clear that XGboost has been given maximum weight. Even while creating models using individual algorithms, it has been found that XGboost performed well. One more way to verify this fact is that the method performed well would be the fit for individual model on the RMSE is also low for XGboost.
+So, the results are consisent with each other with high bias and low variance and ensemble methods has resulted in model with right weightage. 
+
+### Model Ensemble with Neural Net
 
 ```{r, include=F}
 CARET.TRAIN.PARMS <- list(method="xgbTree") 
@@ -1061,7 +1109,6 @@ CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
 
 
 MODEL.SPECIFIC.PARMS <- list(verbose=FALSE,linout=TRUE,trace=FALSE) #NULL # Other model specific parameters
-
 
 
 
@@ -1099,4 +1146,10 @@ dt.result <- as.data.frame(dt.result, row.names = NULL)
 write.csv(dt.result, 'Result.csv')
 
 ```
+
+All individual predictions from the Gradient Boost Method, Random Forest and XGBoosted model are assembled into a data frame. On top of these predictions a Neural net Model is applied to stack the above model.
+Neural net assign weights to the predictions, in turn giving weights to the individual models. 
+This way the best predictions from each model is picked. We created the final predictions from this model.
+
+GBM + RF + XGBoosted -> Preds -> NN -> Final Preds
 
