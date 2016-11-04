@@ -84,14 +84,13 @@ stats <- function(x){
 ```{r Loading the data, include=F}
 
 # setwd('/Users/dmatam/Google Drive/1_PC/Predictive Analytics with R/Final Project/Raw Data/')
-# setwd("E:/MS/PAR/GroupProject/PAR-GP")
+setwd("E:/MS/PAR/GroupProject/PAR-GP")
 #setwd("/Users/mdobbali/Google Drive/University/Projects/PAR-GP/")
 
 dt.train <- read.csv('train.csv', stringsAsFactors = FALSE)
 dt.test <- read.csv('test.csv', stringsAsFactors = FALSE)
 dim(dt.train)
 str(dt.train)
-
 
 ```
 
@@ -1066,11 +1065,11 @@ Even though Ensemble methods take lot of computation power they are well know to
 
 ```{r, include=T,echo=F, warning=F}
 
-cat("RMSE of the Ensembled(Random) model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1))
+cat("RMSE of the Ensembled(Linear Regression) model on train set : ", rmse(exp(t.train$SalePrice)-1,exp(predict(ce, newdata = t.train))-1))
 
-cat("RMSE of the Ensembled model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1))
+cat("RMSE of the Ensembled(Linear Regression) model on test set : ", rmse(exp(t.test$SalePrice)-1,exp(predict(ce, newdata = t.test))-1))
 
-cat("Rsquared value of the Ensembled Model : ",ce$results$Rsquared )
+#cat("Rsquared value of the Ensembled Model : ",ce$results$Rsquared )
 
 
 ```
@@ -1107,10 +1106,7 @@ CARET.TRAIN.OTHER.PARMS <- list(trControl=CARET.TRAIN.CTRL,
                            tuneLength=7,
                            metric="RMSE")
 
-
 MODEL.SPECIFIC.PARMS <- list(verbose=FALSE,linout=TRUE,trace=FALSE) #NULL # Other model specific parameters
-
-
 
 # train the model
 set.seed(825)
@@ -1119,31 +1115,32 @@ l1_nnet_mdl <- do.call(train,c(list(x=model_preds.t,y=dt.train$SalePrice),
                             MODEL.SPECIFIC.PARMS,
                             CARET.TRAIN.OTHER.PARMS))
 
-
 rmse(exp(dt.train$SalePrice)-1,exp(predict(l1_nnet_mdl))-1)
-
 
 model_preds <- data.frame(gbm_yhat=predict(gbm_mod, newdata = dt.test),
                                       xgb_yhat=predict(xgBoostm, newdata = dt.test),
                                       rngr_yhat=predict(ranger_mod, newdata = dt.test))
 
-
 result <- exp(predict(l1_nnet_mdl, newdata = model_preds)) -1
-
 
 dt.result <- NULL
 dt.result$Id <- dt.test$Id
 dt.result$SalePrice <- result
 
-
 str(dt.test)
 str(result)
 
-
 dt.result <- as.data.frame(dt.result, row.names = NULL)
 
-
 write.csv(dt.result, 'Result.csv')
+
+```
+
+
+```{r, include=T,echo=F, warning=F}
+
+cat("RMSE of the Ensembled(Neural Net) model on train set : ", 
+rmse(exp(dt.train$SalePrice)-1,exp(predict(l1_nnet_mdl))-1))
 
 ```
 
